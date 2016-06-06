@@ -292,7 +292,7 @@
 #endif
 
 #ifndef NIMBLE_OPT_LL_CONN_INIT_MAX_TX_BYTES
-#define NIMBLE_OPT_LL_CONN_INIT_MAX_TX_BYTES    (27)
+#define NIMBLE_OPT_LL_CONN_INIT_MAX_TX_BYTES    (251)
 #endif
 
 /* The number of slots that will be allocated to each connection */
@@ -331,7 +331,7 @@
  * This is implemented in the controller but is disabled by default.
  */
 #ifndef BLE_LL_CFG_FEAT_CONN_PARAM_REQ
-#define BLE_LL_CFG_FEAT_CONN_PARAM_REQ          (0)
+#define BLE_LL_CFG_FEAT_CONN_PARAM_REQ          (1)
 #endif
 
 /*
