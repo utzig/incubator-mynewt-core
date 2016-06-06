@@ -72,7 +72,7 @@ uint8_t g_random_addr[BLE_DEV_ADDR_LEN];
 uint8_t g_host_adv_len;
 
 /** Our public address.  Note: this is in reverse byte order. */
-static uint8_t bletiny_addr[6] = {0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a};
+static uint8_t bletiny_addr[6] = {0x01, 0x01, 0x01, 0x07, 0x08, 0x01};
 
 /* Create a mbuf pool of BLE mbufs */
 #define MBUF_NUM_MBUFS      (16)
