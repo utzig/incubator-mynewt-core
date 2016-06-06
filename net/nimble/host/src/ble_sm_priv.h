@@ -310,23 +310,64 @@ void ble_sm_pair_cmd_write(void *payload, int len, int is_req,
                            struct ble_sm_pair_cmd *cmd);
 int ble_sm_pair_cmd_tx(uint16_t conn_handle, int is_req,
                        struct ble_sm_pair_cmd *cmd);
+void ble_sm_pair_cmd_log(struct ble_sm_pair_cmd *cmd);
 void ble_sm_pair_confirm_parse(void *payload, int len,
                                struct ble_sm_pair_confirm *cmd);
 void ble_sm_pair_confirm_write(void *payload, int len,
                                struct ble_sm_pair_confirm *cmd);
 int ble_sm_pair_confirm_tx(uint16_t conn_handle,
                            struct ble_sm_pair_confirm *cmd);
+void ble_sm_pair_confirm_log(struct ble_sm_pair_confirm *cmd);
 void ble_sm_pair_random_parse(void *payload, int len,
                               struct ble_sm_pair_random *cmd);
 void ble_sm_pair_random_write(void *payload, int len,
                               struct ble_sm_pair_random *cmd);
 int ble_sm_pair_random_tx(uint16_t conn_handle,
                           struct ble_sm_pair_random *cmd);
+void ble_sm_pair_random_log(struct ble_sm_pair_random *cmd);
 void ble_sm_pair_fail_parse(void *payload, int len,
                             struct ble_sm_pair_fail *cmd);
 void ble_sm_pair_fail_write(void *payload, int len,
                             struct ble_sm_pair_fail *cmd);
 int ble_sm_pair_fail_tx(uint16_t conn_handle, uint8_t reason);
+void ble_sm_pair_fail_log(struct ble_sm_pair_fail *cmd);
+void ble_sm_enc_info_parse(void *payload, int len,
+                           struct ble_sm_enc_info *cmd);
+int ble_sm_enc_info_tx(uint16_t conn_handle, struct ble_sm_enc_info *cmd);
+void ble_sm_enc_info_log(struct ble_sm_enc_info *cmd);
+void ble_sm_master_id_parse(void *payload, int len,
+                            struct ble_sm_master_id *cmd);
+int ble_sm_master_id_tx(uint16_t conn_handle, struct ble_sm_master_id *cmd);
+void ble_sm_master_id_log(struct ble_sm_master_id *cmd);
+void ble_sm_id_info_parse(void *payload, int len, struct ble_sm_id_info *cmd);
+int ble_sm_id_info_tx(uint16_t conn_handle, struct ble_sm_id_info *cmd);
+void ble_sm_id_info_log(struct ble_sm_id_info *cmd);
+void ble_sm_id_addr_info_parse(void *payload, int len,
+                            struct ble_sm_id_addr_info *cmd);
+int ble_sm_id_addr_info_tx(uint16_t conn_handle,
+                           struct ble_sm_id_addr_info *cmd);
+void ble_sm_id_addr_info_log(struct ble_sm_id_addr_info *cmd);
+void ble_sm_sign_info_parse(void *payload, int len,
+                            struct ble_sm_sign_info *cmd);
+int ble_sm_sign_info_tx(uint16_t conn_handle, struct ble_sm_sign_info *cmd);
+void ble_sm_sign_info_log(struct ble_sm_sign_info *cmd);
+void ble_sm_sec_req_parse(void *payload, int len, struct ble_sm_sec_req *cmd);
+void ble_sm_sec_req_write(void *payload, int len, struct ble_sm_sec_req *cmd);
+int ble_sm_sec_req_tx(uint16_t conn_handle, struct ble_sm_sec_req *cmd);
+void ble_sm_sec_req_log(struct ble_sm_sec_req *cmd);
+void ble_sm_public_key_parse(void *payload, int len,
+                             struct ble_sm_public_key *cmd);
+int ble_sm_public_key_write(void *payload, int len,
+                            struct ble_sm_public_key *cmd);
+int ble_sm_public_key_tx(uint16_t conn_handle, struct ble_sm_public_key *cmd);
+void ble_sm_public_key_log(struct ble_sm_public_key *cmd);
+void ble_sm_dhkey_check_parse(void *payload, int len,
+                              struct ble_sm_dhkey_check *cmd);
+int ble_sm_dhkey_check_write(void *payload, int len,
+                             struct ble_sm_dhkey_check *cmd);
+int ble_sm_dhkey_check_tx(uint16_t conn_handle,
+                          struct ble_sm_dhkey_check *cmd);
+void ble_sm_dhkey_check_log(struct ble_sm_dhkey_check *cmd);
 
 int ble_sm_alg_s1(uint8_t *k, uint8_t *r1, uint8_t *r2, uint8_t *out);
 int ble_sm_alg_c1(uint8_t *k, uint8_t *r,
@@ -348,70 +389,42 @@ int ble_sm_alg_gen_dhkey(uint8_t *peer_pub_key_x, uint8_t *peer_pub_key_y,
                          uint32_t *our_priv_key, void *out_dhkey);
 int ble_sm_alg_gen_key_pair(void *pub, uint32_t *priv);
 
-void ble_sm_enc_info_parse(void *payload, int len,
-                           struct ble_sm_enc_info *cmd);
-int ble_sm_enc_info_tx(uint16_t conn_handle, struct ble_sm_enc_info *cmd);
-void ble_sm_master_id_parse(void *payload, int len,
-                            struct ble_sm_master_id *cmd);
-int ble_sm_master_id_tx(uint16_t conn_handle, struct ble_sm_master_id *cmd);
-void ble_sm_id_info_parse(void *payload, int len, struct ble_sm_id_info *cmd);
-int ble_sm_id_info_tx(uint16_t conn_handle, struct ble_sm_id_info *cmd);
-void ble_sm_iden_addr_parse(void *payload, int len,
-                            struct ble_sm_id_addr_info *cmd);
-int ble_sm_iden_addr_tx(uint16_t conn_handle, struct ble_sm_id_addr_info *cmd);
-void ble_sm_sign_info_parse(void *payload, int len,
-                            struct ble_sm_sign_info *cmd);
-int ble_sm_sign_info_tx(uint16_t conn_handle, struct ble_sm_sign_info *cmd);
-void ble_sm_sec_req_parse(void *payload, int len, struct ble_sm_sec_req *cmd);
-void ble_sm_sec_req_write(void *payload, int len, struct ble_sm_sec_req *cmd);
-int ble_sm_sec_req_tx(uint16_t conn_handle, struct ble_sm_sec_req *cmd);
-int ble_sm_public_key_parse(void *payload, int len,
-                            struct ble_sm_public_key *cmd);
-int ble_sm_public_key_write(void *payload, int len,
-                            struct ble_sm_public_key *cmd);
-int ble_sm_public_key_tx(uint16_t conn_handle, struct ble_sm_public_key *cmd);
-int ble_sm_dhkey_check_parse(void *payload, int len,
-                             struct ble_sm_dhkey_check *cmd);
-int ble_sm_dhkey_check_write(void *payload, int len,
-                             struct ble_sm_dhkey_check *cmd);
-int ble_sm_dhkey_check_tx(uint16_t conn_handle,
-                          struct ble_sm_dhkey_check *cmd);
+void ble_sm_enc_change_rx(struct hci_encrypt_change *evt);
+int ble_sm_ltk_req_rx(struct hci_le_lt_key_req *evt);
 
-void ble_sm_rx_encryption_change(struct hci_encrypt_change *evt);
-int ble_sm_rx_lt_key_req(struct hci_le_lt_key_req *evt);
-
-int ble_sm_lgcy_passkey_action(struct ble_sm_proc *proc);
-void ble_sm_lgcy_confirm_go(struct ble_sm_proc *proc,
-                            struct ble_sm_result *res);
-void ble_sm_lgcy_random_go(struct ble_sm_proc *proc,
+int ble_sm_lgcy_io_action(struct ble_sm_proc *proc);
+void ble_sm_lgcy_confirm_exec(struct ble_sm_proc *proc,
+                              struct ble_sm_result *res);
+void ble_sm_lgcy_random_exec(struct ble_sm_proc *proc,
+                             struct ble_sm_result *res);
+void ble_sm_lgcy_random_rx(struct ble_sm_proc *proc,
                            struct ble_sm_result *res);
-void ble_sm_lgcy_rx_pair_random(struct ble_sm_proc *proc,
-                               struct ble_sm_result *res);
 
 #if NIMBLE_OPT(SM_SC)
-int ble_sm_sc_passkey_action(struct ble_sm_proc *proc);
-void ble_sm_sc_confirm_go(struct ble_sm_proc *proc, struct ble_sm_result *res);
-void ble_sm_sc_random_go(struct ble_sm_proc *proc, struct ble_sm_result *res);
-void ble_sm_sc_random_rx(struct ble_sm_proc *proc,
-                             struct ble_sm_result *res);
-void ble_sm_sc_public_key_go(struct ble_sm_proc *proc,
-                             struct ble_sm_result *res,
-                             void *arg);
+int ble_sm_sc_io_action(struct ble_sm_proc *proc);
+void ble_sm_sc_confirm_exec(struct ble_sm_proc *proc,
+                            struct ble_sm_result *res);
+void ble_sm_sc_random_exec(struct ble_sm_proc *proc,
+                           struct ble_sm_result *res);
+void ble_sm_sc_random_rx(struct ble_sm_proc *proc, struct ble_sm_result *res);
+void ble_sm_sc_public_key_exec(struct ble_sm_proc *proc,
+                               struct ble_sm_result *res,
+                               void *arg);
 void ble_sm_sc_public_key_rx(uint16_t conn_handle, uint8_t op,
                              struct os_mbuf **om, struct ble_sm_result *res);
-void ble_sm_sc_dhkey_check_go(struct ble_sm_proc *proc,
-                              struct ble_sm_result *res, void *arg);
+void ble_sm_sc_dhkey_check_exec(struct ble_sm_proc *proc,
+                                struct ble_sm_result *res, void *arg);
 void ble_sm_sc_dhkey_check_rx(uint16_t conn_handle, uint8_t op,
                               struct os_mbuf **om, struct ble_sm_result *res);
 void ble_sm_sc_init(void);
 #else
-#define ble_sm_sc_passkey_action(proc) (BLE_SM_PKACT_NONE)
-#define ble_sm_sc_confirm_go(proc, res)
-#define ble_sm_sc_random_go(proc, res)
+#define ble_sm_sc_io_action(proc) (BLE_SM_IOACT_NONE)
+#define ble_sm_sc_confirm_exec(proc, res)
+#define ble_sm_sc_random_exec(proc, res)
 #define ble_sm_sc_random_rx(proc, res)
-#define ble_sm_sc_public_key_go(proc, res, arg)
+#define ble_sm_sc_public_key_exec(proc, res, arg)
 #define ble_sm_sc_public_key_rx(conn_handle, op, om, res)
-#define ble_sm_sc_dhkey_check_go(proc, res, arg)
+#define ble_sm_sc_dhkey_check_exec(proc, res, arg)
 #define ble_sm_sc_dhkey_check_rx(conn_handle, op, om, res)
 #define ble_sm_sc_init()
 
@@ -423,8 +436,8 @@ struct ble_sm_proc *ble_sm_proc_find(uint16_t conn_handle, uint8_t state,
 int ble_sm_gen_pair_rand(uint8_t *pair_rand);
 int ble_sm_gen_pub_priv(void *pub, uint32_t *priv);
 uint8_t *ble_sm_our_pair_rand(struct ble_sm_proc *proc);
-uint8_t *ble_sm_their_pair_rand(struct ble_sm_proc *proc);
-int ble_sm_pkact_state(uint8_t action);
+uint8_t *ble_sm_peer_pair_rand(struct ble_sm_proc *proc);
+int ble_sm_ioact_state(uint8_t action);
 int ble_sm_proc_can_advance(struct ble_sm_proc *proc);
 void ble_sm_process_result(uint16_t conn_handle, struct ble_sm_result *res);
 void ble_sm_confirm_advance(struct ble_sm_proc *proc);
@@ -441,17 +454,15 @@ int ble_sm_enc_initiate(uint16_t conn_handle, uint8_t *ltk,
                         uint16_t ediv, uint64_t rand_val, int auth);
 int ble_sm_init(void);
 
+#define BLE_SM_LOG_CMD(is_tx, cmd_name, conn_handle, log_cb, cmd) \
+    BLE_HS_LOG_CMD((is_tx), "sm", (cmd_name), (conn_handle), (log_cb), (cmd))
+
 #else
 
-#ifdef BLE_HS_DEBUG
-#define ble_sm_dbg_set_next_rand(next_rand)
 #define ble_sm_dbg_num_procs() 0
-#endif
-
 #define ble_sm_create_chan() NULL
-
-#define ble_sm_rx_encryption_change(evt) ((void)(evt))
-#define ble_sm_rx_lt_key_req(evt) ((void)(evt))
+#define ble_sm_enc_change_rx(evt) ((void)(evt))
+#define ble_sm_ltk_req_rx(evt) ((void)(evt))
 
 #define ble_sm_heartbeat()
 #define ble_sm_connection_broken(conn_handle)
