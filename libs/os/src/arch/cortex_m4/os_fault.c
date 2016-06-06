@@ -118,6 +118,12 @@ __assert_func(const char *file, int line, const char *func, const char *e)
     (void)sr;
     console_blocking_mode();
     console_printf("Assert %s; failed in %s:%d\n", e ? e : "", file, line);
+    if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk) {
+        /*
+         * If debugger is attached, breakpoint here.
+         */
+        asm("bkpt");
+    }
     SCB->ICSR = SCB_ICSR_NMIPENDSET_Msk;
     asm("isb");
     system_reset();
