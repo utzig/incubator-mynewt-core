@@ -75,7 +75,7 @@ uint8_t g_host_adv_len;
 static uint8_t bletiny_addr[6] = {0x01, 0x01, 0x01, 0x07, 0x08, 0x01};
 
 /* Create a mbuf pool of BLE mbufs */
-#define MBUF_NUM_MBUFS      (16)
+#define MBUF_NUM_MBUFS      (32)
 #define MBUF_BUF_SIZE       OS_ALIGN(BLE_MBUF_PAYLOAD_SIZE, 4)
 #define MBUF_MEMBLOCK_SIZE  (MBUF_BUF_SIZE + BLE_MBUF_MEMBLOCK_OVERHEAD)
 #define MBUF_MEMPOOL_SIZE   OS_MEMPOOL_SIZE(MBUF_NUM_MBUFS, MBUF_MEMBLOCK_SIZE)
