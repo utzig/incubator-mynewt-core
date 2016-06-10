@@ -23,7 +23,7 @@
 /** HOST / CONTROLLER: Maximum number of concurrent connections. */
 
 #ifndef NIMBLE_OPT_MAX_CONNECTIONS
-#define NIMBLE_OPT_MAX_CONNECTIONS              2
+#define NIMBLE_OPT_MAX_CONNECTIONS              1
 #endif
 
 
