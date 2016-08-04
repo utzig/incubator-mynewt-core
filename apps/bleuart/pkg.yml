@@ -30,6 +30,7 @@ pkg.deps:
     - net/nimble/host/services/gap
     - net/nimble/host/services/gatt
     - net/nimble/host/store/ram
+    - net/nimble/transport/ram
     - libs/console/full
     - libs/baselibc
     - libs/newtmgr
