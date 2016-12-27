@@ -64,7 +64,7 @@ static struct uart_dev os_bsp_uart5;
  */
 static const struct hal_bsp_mem_dump dump_cfg[] = {
     [0] = {
-	.hbmd_start = &__DATA_ROM,
+        .hbmd_start = &__DATA_ROM,
         .hbmd_size = RAM_SIZE
     }
 };
