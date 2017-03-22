@@ -100,7 +100,7 @@ const clock_config_t g_defaultClockConfigRun = {
             .ircs = kMCG_IrcSlow,                /* Select IRC32k. */
             .fcrdiv = 0U,                        /* FCRDIV is 0. */
 
-            .frdiv = 7U,
+            .frdiv = 0U,
             .drs = kMCG_DrsLow,         /* Low frequency range. */
             .dmx32 = kMCG_Dmx32Default, /* DCO has a default range of 25%. */
             .oscsel = kMCG_OscselOsc,   /* Select OSC. */
@@ -185,11 +185,14 @@ void BOARD_BootClockRUN(void)
     CLOCK_InitOsc0(&g_defaultClockConfigRun.oscConfig);
     CLOCK_SetXtal0Freq(BOARD_XTAL0_CLK_HZ);
 
-    CLOCK_BootToPeeMode(g_defaultClockConfigRun.mcgConfig.oscsel, kMCG_PllClkSelPll0,
-                        &g_defaultClockConfigRun.mcgConfig.pll0Config);
-
     CLOCK_SetInternalRefClkConfig(g_defaultClockConfigRun.mcgConfig.irclkEnableMode,
                                   g_defaultClockConfigRun.mcgConfig.ircs, g_defaultClockConfigRun.mcgConfig.fcrdiv);
+
+    //FIXME
+    MCG->C1 = (MCG->C1 & ~MCG_C1_FRDIV_MASK) | MCG_C1_FRDIV(g_defaultClockConfigRun.mcgConfig.frdiv);
+
+    CLOCK_BootToPeeMode(g_defaultClockConfigRun.mcgConfig.oscsel, kMCG_PllClkSelPll0,
+                        &g_defaultClockConfigRun.mcgConfig.pll0Config);
 
     CLOCK_SetSimConfig(&g_defaultClockConfigRun.simConfig);
 
