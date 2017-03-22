@@ -17,30 +17,18 @@
 # under the License.
 #
 
-pkg.name: hw/bsp/stm32f767-nucleo
-pkg.type: bsp
-pkg.description: BSP definition for the stm32f767-nucleo board.
-pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
+pkg.name: apps/usb_hid
+pkg.type: app
+pkg.description: "Implements a generic USB HID device."
+pkg.author: "Apache Mynewt <dev@mynewt.incubator.apache.org>"
 pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
-    - stm32
-    - stm32f7
-    - nucleo
-
-pkg.cflags: -DSTM32F767xx
-
-pkg.cflags.HARDFLOAT:
-    - -mfloat-abi=hard -mfpu=fpv4-sp-d16
 
 pkg.deps:
-    - hw/mcu/stm/stm32f7xx
-    - libc/baselibc
-
-pkg.deps.UART_0:
-    - hw/drivers/uart/uart_hal
-
-pkg.deps.ETH_0:
-    - hw/drivers/lwip/stm32_eth
-
-pkg.deps.USB_DEV:
-    - hw/usb/dev/hal/stm32
+    - kernel/os
+    - hw/usb
+    - hw/usb/dev
+    - hw/usb/dev/class/hid
+    - sys/console/minimal
+    - sys/log/stub
+    - sys/stats/stub
