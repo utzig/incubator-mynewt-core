@@ -348,7 +348,7 @@ Reset_Handler:
     ldr    r3, =__data_end__
 
 #if 1
-/* Here are two copies of loop implemenations. First one favors code size
+/* Here are two copies of loop implementations. First one favors code size
  * and the second one favors performance. Default uses the first one.
  * Change to "#if 0" to use the second one */
 .LC0:
@@ -362,8 +362,8 @@ Reset_Handler:
     ble    .LC1
 .LC0:
     subs    r3, #4
-    ldr    r0, [r1, r3]
-    str    r0, [r2, r3]
+    ldr     r0, [r1, r3]
+    str     r0, [r2, r3]
     bgt    .LC0
 .LC1:
 #endif
@@ -383,16 +383,27 @@ Reset_Handler:
     movs    r0, 0
 .LC2:
     cmp     r1, r2
-    itt    lt
+    itt     lt
     strlt   r0, [r1], #4
     blt    .LC2
 #endif /* __STARTUP_CLEAR_BSS */
 
     cpsie   i               /* Unmask interrupts */
+
 #ifndef __START
 #define __START _start
 #endif
+
+    /* FIXME: this is not the place for defines (also lack of inspiration!) */
+    ldr   r1, =0xdeadbeef
+    cmp   r4, r1
+    bne   .no_bootapi
+    ldr   r1, =p_mcuboot_api_vt
+    str   r5, [r1]
+.no_bootapi:
+
 #ifndef __ATOLLIC__
+
     ldr   r0,=__START
     blx   r0
 #else

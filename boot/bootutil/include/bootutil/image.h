@@ -51,8 +51,8 @@ struct flash_area;
 /*
  * Image trailer TLV types.
  */
-#define IMAGE_TLV_SHA256            1	/* SHA256 of image hdr and body */
-#define IMAGE_TLV_RSA2048           2	/* RSA2048 of hash output */
+#define IMAGE_TLV_SHA256            1   /* SHA256 of image hdr and body */
+#define IMAGE_TLV_RSA2048           2   /* RSA2048 of hash output */
 #define IMAGE_TLV_ECDSA224          3   /* ECDSA of hash output */
 #define IMAGE_TLV_ECDSA256          4   /* ECDSA of hash output */
 

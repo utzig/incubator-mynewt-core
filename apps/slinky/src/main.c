@@ -86,6 +86,26 @@ static int test_conf_commit(void);
 static int test_conf_export(void (*export_func)(char *name, char *val),
   enum conf_export_tgt tgt);
 
+/* FIXME: this is declared by mcuboot, but right now both mcuboot
+ *        and apps/boot provide the same includes which clash!
+ */
+struct mcuboot_api_itf {
+    uint32_t mcuboot_api_magic;
+    uint32_t mcuboot_version;
+    int (*mcuboot_ioctl)(int req, void *arg);
+};
+
+struct mcuboot_api_itf *p_mcuboot_api_vt = NULL;
+
+struct mcuboot_api_flash_info {
+    /* inputs */
+    uint8_t  index;
+    /* outputs */
+    uint8_t  id;
+    uint32_t offset;
+    uint32_t size;
+};
+
 static struct conf_handler test_conf_handler = {
     .ch_name = "test",
     .ch_get = test_conf_get,
@@ -282,6 +302,30 @@ main(int argc, char **argv)
         }
     }
 #endif
+
+    if (p_mcuboot_api_vt && p_mcuboot_api_vt->mcuboot_api_magic == 0xdeadbeef) {
+        uint32_t v;
+        int i = 0;
+        struct mcuboot_api_flash_info info;
+
+        v = p_mcuboot_api_vt->mcuboot_version;
+        console_printf("\nMCUBOOT - version: %lu.%lu.%lu\n",
+                (v >> 24) & 0xff, (v >> 16) & 0xff, v & 0xff);
+        console_printf("\nMCUBOOT - ioctl magic: %x\n",
+                p_mcuboot_api_vt->mcuboot_ioctl(0x1234, NULL));
+        rc = p_mcuboot_api_vt->mcuboot_ioctl(0, &v);
+        if (!rc) {
+            console_printf("\nMCUBOOT - flash partition amount: %lu\n", v);
+            for (i = 0; i < v; i++) {
+                info.index = i;
+                rc = p_mcuboot_api_vt->mcuboot_ioctl(1, &info);
+                if (!rc) {
+                    console_printf("Partition %u: id=%d, offset=0x%lx, size=%lu\n",
+                            i, info.id, info.offset, info.size);
+                }
+            }
+        }
+    }
 
     /*
      * As the last thing, process events from default event queue.

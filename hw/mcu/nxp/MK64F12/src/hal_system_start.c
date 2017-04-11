@@ -21,6 +21,12 @@
 #include <inttypes.h>
 #include <mcu/cortex_m4.h>
 
+/* FIXME: this is declared by mcuboot, but right now both mcuboot
+ *        and apps/boot provide the same includes which clash!
+ */
+struct mcuboot_api_itf;
+extern struct mcuboot_api_itf mcuboot_api_vt;
+
 /**
  * Boots the image described by the supplied image header.
  *
@@ -45,6 +51,16 @@ hal_system_start(void *img_start)
 
     /* Second word contains address of entry point (Reset_Handler). */
     void (*entry)(void) = (void (*)(void))*(uint32_t *)(img_start + 4);
+
+    /* FIXME: this should be a macro which is ARCH specific, as defined in
+     * MCUBOOT_API_INIT, but currently mcuboot and the existing boot loader
+     * in mynewt conflict. To be fixed soon!
+     *
+     * This has to be done just before jumping into the app, to avoid
+     * overwriting the registers...
+     */
+    asm("ldr r4, =0xdeadbeef\n\t"
+        "mov r5, %0" : : "r" (&mcuboot_api_vt) : "r4", "r5");
 
     /* Jump to image. */
     entry();
