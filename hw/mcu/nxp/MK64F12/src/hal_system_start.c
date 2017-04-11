@@ -46,6 +46,10 @@ hal_system_start(void *img_start)
     /* Second word contains address of entry point (Reset_Handler). */
     void (*entry)(void) = (void (*)(void))*(uint32_t *)(img_start + 4);
 
+    extern struct boot_itf bootapi_vt;
+    asm("ldr r4, =0xdeadbeef\n\t"
+        "mov r5, %0" : : "r" (&bootapi_vt) : "r4", "r5");
+
     /* Jump to image. */
     entry();
 

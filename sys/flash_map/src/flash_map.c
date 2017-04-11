@@ -30,17 +30,19 @@
 #include "hal/hal_flash_int.h"
 #include "mfg/mfg.h"
 #include "flash_map/flash_map.h"
+#include "bootutil/bootutil.h"
 
-const struct flash_area *flash_map;
-int flash_map_entries;
+extern struct boot_itf *p_bootapi_vt;
+int flash_map_entries = 0;
 
 int
 flash_area_open(uint8_t id, const struct flash_area **fap)
 {
     const struct flash_area *area;
     int i;
+    //int rc;
 
-    if (flash_map == NULL) {
+    if (!flash_map_entries) {
         return SYS_EACCES;
     }
 
@@ -248,16 +250,7 @@ flash_map_init(void)
     rc = hal_flash_init();
     SYSINIT_PANIC_ASSERT(rc == 0);
 
-    /* Use the hardcoded default flash map.  This is done for two reasons:
-     * 1. A minimal flash map configuration is required to boot strap the
-     *    process of reading the flash map from the manufacturing meta region.
-     *    In particular, a FLASH_AREA_BOOTLOADER entry is required, as the meta
-     *    region is located at the end of the boot loader area.
-     * 2. If we fail to read the flash map from the meta region, the system
-     *    continues to use the default flash map.
-     */
-    flash_map = sysflash_map_dflt;
-    flash_map_entries = sizeof sysflash_map_dflt / sizeof sysflash_map_dflt[0];
+    p_bootapi_vt->flash_map_size(&flash_map_entries);
 
     /* Attempt to read the flash map from the manufacturing meta region.  On
      * success, use the new flash map instead of the default hardcoded one.

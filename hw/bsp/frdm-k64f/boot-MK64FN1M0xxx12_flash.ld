@@ -170,6 +170,13 @@ SECTIONS
     PROVIDE_HIDDEN (__fini_array_end = .);
   } > m_text
 
+  .bootapi_vt :
+  {
+    PROVIDE_HIDDEN (__bootapi_vt_start = .);
+    KEEP (*bootapi_vt)
+    PROVIDE_HIDDEN (__bootapi_vt_end = .);
+  } > m_text
+
   __etext = .;    /* define a global symbol at end of code */
   __DATA_ROM = .; /* Symbol is used by startup for data initialization */
 

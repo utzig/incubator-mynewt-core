@@ -286,6 +286,21 @@ main(int argc, char **argv)
     }
 #endif
 
+    extern struct boot_itf *p_bootapi_vt;
+    console_printf("\n\np_bootapi_vt=0x%lx\n", (uint32_t)p_bootapi_vt);
+    //console_printf("\n\n*p_bootapi_vt=0x%lx\n", (uint32_t)*p_bootapi_vt);
+    //console_printf("\n\n&bootapi_vt=0x%lx\n", (uint32_t)&bootapi_vt);
+
+    int amount;
+    rc = p_bootapi_vt->flash_map_size(&amount);
+    console_printf("\n\nrc=%d, amount=%d\n", rc, amount);
+
+    //int device;
+    //uint32_t offset, size;
+    //rc = p_bootloader_itf->flash_map_info(0, &device, &offset, &size);
+    //console_printf("\n\nrc=%d, device=%d, offset=0x%lx, size=0x%lx\n",
+    //        rc, device, offset, size);
+
     /*
      * As the last thing, process events from default event queue.
      */

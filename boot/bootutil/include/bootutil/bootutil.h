@@ -65,6 +65,20 @@ int boot_swap_type(void);
 int boot_set_pending(int permanent);
 int boot_set_confirmed(void);
 
+#define BOOTAPI_VERSION(x)          (x)
+//extern const uint32_t BOOTAPI_MAGIC;
+
+struct boot_itf {
+    uint32_t bootapi_magic;
+    int (*flash_map_size)(int *amount);
+    int (*flash_map_info)(int index, int *device, uint32_t *offset,
+            uint32_t *size);
+    uint8_t bootapi_version;
+};
+
+extern const struct boot_itf bootapi_vt;
+extern struct boot_itf *p_bootapi_vt;
+
 #define SPLIT_GO_OK                 (0)
 #define SPLIT_GO_NON_MATCHING       (-1)
 #define SPLIT_GO_ERR                (-2)
