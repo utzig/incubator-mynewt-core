@@ -1,0 +1,101 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+# Package: hw/bsp/hifive
+
+syscfg.defs:
+    CLOCK_FREQ:
+        # TODO:
+        description: 'Clock frequency (hertz).'
+        value:  546000000ul
+
+    UART_0:
+        description: 'Whether to enable UART0'
+        value:  0
+
+    UART_0_PIN_TX:
+        description: 'TX pin for UART0'
+        value:  17
+    UART_0_PIN_RX:
+        description: 'RX pin for UART0'
+        value:  16
+
+    UART_1:
+        description: 'Whether to enable UART1'
+        value:  0
+
+    UART_1_PIN_TX:
+        description: 'TX pin for UART1'
+        value:  25
+    UART_1_PIN_RX:
+        description: 'RX pin for UART1'
+        value:  24
+
+    QSPI_1:
+        description: 'Whether to enable QSPI1'
+        value:  0
+    QSPI_1_PIN_SS0:
+        description: 'SS0 pin for QSPI1'
+        value:  2
+    QSPI_1_PIN_MOSI:
+        description: 'SD0/MOSI pin for QSPI1'
+        value:  3
+    QSPI_1_PIN_MISO:
+        description: 'SDI/MISO pin for QSPI1'
+        value:  4
+    QSPI_1_PIN_SCK:
+        description: 'SCK pin for QSPI1'
+        value:  5
+    QSPI_1_PIN_SD2:
+        description: 'SD2 pin for QSPI1'
+        value:  6
+    QSPI_1_PIN_SD3:
+        description: 'SD3 pin for QSPI1'
+        value:  7
+    QSPI_1_PIN_SS1:
+        description: 'SS1 pin for QSPI1'
+        value:  8
+    QSPI_1_PIN_SS2:
+        description: 'SS2 pin for QSPI1'
+        value:  9
+    QSPI_1_PIN_SS3:
+        description: 'SS3 pin for QSPI1'
+        value:  10
+
+    QSPI_2:
+        description: 'Whether to enable QSPI2'
+        value:  0
+    QSPI_2_PIN_SS:
+        description: 'SS pin for QSPI2'
+        value:  26
+    QSPI_2_PIN_MOSI:
+        description: 'SD0/MOSI pin for QSPI2'
+        value:  27
+    QSPI_2_PIN_MISO:
+        description: 'SDI/MISO pin for QSPI2'
+        value:  28
+    QSPI_2_PIN_SCK:
+        description: 'SCK pin for QSPI2'
+        value:  29
+    QSPI_2_PIN_SD2:
+        description: 'SD2 pin for QSPI2'
+        value:  30
+    QSPI_2_PIN_SD3:
+        description: 'SD3 pin for QSPI2'
+        value:  31
