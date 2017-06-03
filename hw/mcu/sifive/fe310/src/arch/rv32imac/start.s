@@ -2,6 +2,8 @@
 
 // See LICENSE for license details.
 
+#include <mcu/encoding.h>
+
 	.section .init
 	.globl _reset_handler
 	.type _reset_handler,@function
@@ -9,6 +11,15 @@
 _reset_handler:
 	la gp, _gp
 	la sp, _sp
+
+	/* Disable Local/Timer/External interrupts */
+	csrr t0, mie
+	li t1, ~(MIP_MSIP | MIP_MTIP | MIP_MEIP)
+	and t0, t0, t1
+	csrw mie, t0
+	/* Enable interrupts */
+	csrs mstatus, MSTATUS_MIE
+	csrr t0, mstatus
 
 	/* Load data section */
 	la a0, _data_lma
