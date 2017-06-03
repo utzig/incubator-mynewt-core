@@ -26,7 +26,10 @@
 extern "C" {
 #endif
 
-#define OS_TICKS_PER_SEC    (1000)
+#if MYNEWT_VAL(XTAL_32768)
+#endif
+
+#define OS_TICKS_PER_SEC    (1024)
 
 #ifdef __cplusplus
 }

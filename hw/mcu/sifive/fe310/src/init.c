@@ -7,41 +7,8 @@
 
 extern void trap_entry();
 
-static unsigned long mtime_lo(void)
-{
-  return *(volatile unsigned long *)(CLINT_CTRL_ADDR + CLINT_MTIME);
-}
-
-#ifdef __riscv32
-
-static uint32_t mtime_hi(void)
-{
-  return *(volatile uint32_t *)(CLINT_CTRL_ADDR + CLINT_MTIME + 4);
-}
-
-uint64_t get_timer_value()
-{
-  while (1) {
-    uint32_t hi = mtime_hi();
-    uint32_t lo = mtime_lo();
-    if (hi == mtime_hi())
-      return ((uint64_t)hi << 32) | lo;
-  }
-}
-
-#else /* __riscv32 */
-
-uint64_t get_timer_value()
-{
-  return mtime_lo();
-}
-
-#endif
-
-unsigned long get_timer_freq()
-{
-  return 32768;
-}
+unsigned long get_timer_freq();
+uint32_t mtime_lo();
 
 static void use_hfrosc(int div, int trim)
 {

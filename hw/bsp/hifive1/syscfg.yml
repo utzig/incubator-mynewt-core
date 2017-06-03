@@ -20,6 +20,10 @@
 # Package: hw/bsp/hifive
 
 syscfg.defs:
+    XTAL_32768:
+        description: 'External 32k oscillator available.'
+        value: 1
+
     CLOCK_FREQ:
         # TODO:
         description: 'Clock frequency (hertz).'

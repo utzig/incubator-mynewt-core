@@ -20,6 +20,16 @@
 #include <os/os.h>
 #include "syscfg/syscfg.h"
 #include "hal/hal_os_tick.h"
+#include <mcu/encoding.h>
+#include <mcu/platform.h>
+
+static uint64_t last_tick_time;
+static uint32_t ticks_per_ostick;
+
+#define RTC_FREQ        32768
+
+uint64_t get_timer_value(void);
+void set_mtimecmp(uint64_t time);
 
 void
 os_tick_idle(os_time_t ticks)
@@ -29,4 +39,21 @@ os_tick_idle(os_time_t ticks)
 void
 os_tick_init(uint32_t os_ticks_per_sec, int prio)
 {
+    ticks_per_ostick = RTC_FREQ / os_ticks_per_sec;
+    last_tick_time = get_timer_value();
+    set_mtimecmp(last_tick_time + ticks_per_ostick);
+
+    set_csr(mie, MIP_MTIP);
+}
+
+void
+timer_interrupt_handler(void)
+{
+    uint64_t time = get_timer_value();
+    int delta = (int)(time - last_tick_time);
+
+    int ticks = delta / ticks_per_ostick;
+    set_mtimecmp(time + ticks_per_ostick);
+
+    os_time_advance(ticks);
 }

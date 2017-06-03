@@ -23,8 +23,7 @@
 #include <hal/hal_bsp.h>
 #include <hal/hal_os_tick.h>
 #include <mcu/encoding.h>
-
-extern void SysTick_Handler(void);
+#include <mcu/platform.h>
 
 struct context_switch_frame {
     uint32_t  pc;
@@ -62,6 +61,38 @@ struct context_switch_frame {
     uint32_t  a7;
 };
 
+uint32_t mtime_lo(void)
+{
+    return CLINT_REG(CLINT_MTIME);
+}
+
+uint32_t mtime_hi(void)
+{
+    return CLINT_REG(CLINT_MTIME + 4);
+}
+
+uint64_t get_timer_value(void)
+{
+    while (1) {
+        uint32_t hi = mtime_hi();
+        uint32_t lo = mtime_lo();
+        if (hi == mtime_hi())
+            return ((uint64_t)hi << 32) | lo;
+    }
+}
+
+void set_mtimecmp(uint64_t time)
+{
+    CLINT_REG(CLINT_MTIMECMP + 4) = -1;
+    CLINT_REG(CLINT_MTIMECMP) = (uint32_t) time;
+    CLINT_REG(CLINT_MTIMECMP + 4) = (uint32_t) (time >> 32);
+}
+
+unsigned long get_timer_freq()
+{
+  return 32768;
+}
+
 /* XXX: determine how to deal with running un-privileged */
 /* only priv currently supported */
 uint32_t os_flags = OS_RUN_PRIV;
@@ -83,22 +114,6 @@ timer_handler(void)
     os_time_advance(1);
 }
 
-// Try and error section begin
-struct csr
-{
-    uint32_t misa;
-    uint32_t mstatus;
-    uint32_t mie;
-    uint32_t mtvec;
-    uint32_t mcounteren;
-    uint32_t mepc;
-    uint32_t mcause;
-    uint32_t mip;
-    uint32_t mcycle;
-    uint32_t mcycleh;
-} csrs;
-// Try and error section end
-
 void
 os_arch_ctx_sw(struct os_task *t)
 {
@@ -106,25 +121,21 @@ os_arch_ctx_sw(struct os_task *t)
         os_sched_ctx_sw_hook(t);
     }
 
-// Try and error section begin
-    /* trigger sw interrupt */
-    csrs.mstatus = read_csr(mstatus);
-    csrs.mie = read_csr(mie);
-    csrs.mtvec = read_csr(mtvec);
-    //csrs.mcounteren = read_csr(mcounteren);
-    csrs.mepc = read_csr(mepc);
-    csrs.mip = read_csr(mip);
-    csrs.misa = read_csr(misa);
-    csrs.mcycle = read_csr(mcycle);
-    csrs.mcycleh = read_csr(mcycleh);
-
-// This request software interrupt in case context switch
-// should be done by interrup instead of ECALL
-    //*((uint32_t *)0x02000000) = 1;
-
-    csrs.mip = read_csr(mip);
-// Try and error section end
+#if CONTEXT_SWITCH_ON_ECALL
+    /*
+     * Synchronous context switch does not work right now due to
+     * interrupts being disabled in os_sched().
+     * The os_sched() function expects that os_arc_ctx_sw() will end before
+     * actual context switch which is not the case when ecall us used.
+     */
     asm("ecall");
+#else
+    /*
+     * This request software interrupt in case context switch
+     * should be done by interrup instead of ECALL
+     */
+    CLINT_REG(CLINT_MSIP) = 1;
+#endif
 }
 
 os_sr_t
@@ -132,7 +143,7 @@ os_arch_save_sr(void)
 {
     uint32_t isr_ctx;
 
-    isr_ctx = clear_csr(mstatus, MSTATUS_MIE);
+    isr_ctx = clear_csr(mstatus, MSTATUS_MIE) & MSTATUS_MIE;
 
     return isr_ctx;
 }
@@ -140,7 +151,7 @@ os_arch_save_sr(void)
 void
 os_arch_restore_sr(os_sr_t isr_ctx)
 {
-    if (!isr_ctx) {
+    if (isr_ctx) {
         set_csr(mstatus, MSTATUS_MIE);
     }
 }
@@ -148,7 +159,7 @@ os_arch_restore_sr(os_sr_t isr_ctx)
 int
 os_arch_in_critical(void)
 {
-    return read_csr(mstatus) & MSTATUS_MIE;
+    return !(read_csr(mstatus) & MSTATUS_MIE);
 }
 
 /* assumes stack_top will be 8 aligned */
@@ -230,6 +241,7 @@ os_arch_os_init(void)
         }
     }
 #endif
+    os_arch_init();
 
     return err;
 }
@@ -237,6 +249,7 @@ os_arch_os_init(void)
 uint32_t
 os_arch_start(void)
 {
+    os_sr_t sr;
     struct os_task *t;
     struct os_task fake_task;
 
@@ -251,6 +264,11 @@ os_arch_start(void)
      */
     os_sched_set_current_task(&fake_task);
 
+    OS_ENTER_CRITICAL(sr);
+    /* Clean software interrupt, and enable it */
+    CLINT_REG(CLINT_MSIP) = 0;
+    set_csr(mie, MIP_MSIP);
+
     /* Intitialize and start system clock timer */
     os_tick_init(OS_TICKS_PER_SEC, OS_TICK_PRIO);
 
@@ -259,6 +277,8 @@ os_arch_start(void)
 
     /* Perform context switch */
     os_arch_ctx_sw(t);
+
+    OS_EXIT_CRITICAL(sr);
 
     /* This should not be reached */
     return (uint32_t) (t->t_arg);
@@ -283,11 +303,6 @@ void
 external_interrupt_handler(uintptr_t mcause)
 {
     // TODO: PLIC code here
-}
-
-void
-timer_interrupt_handler(uintptr_t mcause)
-{
 }
 
 void
