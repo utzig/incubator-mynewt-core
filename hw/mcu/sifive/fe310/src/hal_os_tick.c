@@ -51,6 +51,7 @@ timer_interrupt_handler(void)
 {
     uint64_t time = get_timer_value();
     int delta = (int)(time - last_tick_time);
+    last_tick_time = time;
 
     int ticks = delta / ticks_per_ostick;
     set_mtimecmp(time + ticks_per_ostick);
