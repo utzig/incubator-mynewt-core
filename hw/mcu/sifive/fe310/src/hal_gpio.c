@@ -147,9 +147,10 @@ hal_gpio_read(int pin)
 int
 hal_gpio_toggle(int pin)
 {
-    int pin_state = (hal_gpio_read(pin) == 0);
-    hal_gpio_write(pin, pin_state);
-    return pin_state;
+    uint32_t mask = 1 << pin_to_offset(pin);
+    uint32_t val = GPIO_REG(GPIO_OUTPUT_VAL) ^ mask;
+    GPIO_REG(GPIO_OUTPUT_VAL) = val;
+    return !!(val & mask);
 }
 
 /**
