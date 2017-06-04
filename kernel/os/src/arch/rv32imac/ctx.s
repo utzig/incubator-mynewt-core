@@ -102,7 +102,6 @@ trap_entry:
 finish_trap_with_return_address:
     csrw mepc, a0             /* Set return addres to what handle_trap returned */
 finish_trap:
-    lw ra, ra_offset(sp)
     lw gp, gp_offset(sp)
     lw tp, tp_offset(sp)
     lw t3, t3_offset(sp)
@@ -119,6 +118,7 @@ finish_trap:
      * fiew registers were actually touched.
      */
 fast_finish_contex_switch:
+    lw ra, ra_offset(sp)
     lw a0, a0_offset(sp)
     lw a1, a1_offset(sp)
     lw t0, t0_offset(sp)
@@ -132,8 +132,7 @@ context_switch:
     lw t2, g_os_run_list     /* Get highest priority task ready to run */
     la t1, g_current_task    /* Get current task address */
     lw t0, (t1)              /* Get current task */
-//    beq t0, t2, fast_finish_contex_switch  /* No context switch needed */
-    beq t0, t2, finish_trap  /* No context switch needed */
+    beq t0, t2, fast_finish_contex_switch  /* No context switch needed */
   
     /* Task needs to be changed, save calle responsible registers */
     call save_callee_responisble_registers
