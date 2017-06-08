@@ -17,16 +17,13 @@
  * under the License.
  */
 
-#ifndef __MCU_RISCV_H__
-#define __MCU_RISCV_H__
+#ifndef __MCU_FE310_H__
+#define __MCU_FE310_H__
 
 #include "syscfg/syscfg.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-#if MYNEWT_VAL(XTAL_32768)
 #endif
 
 #define OS_TICKS_PER_SEC    (1024)
@@ -35,4 +32,4 @@ extern "C" {
 }
 #endif
 
-#endif /* __MCU_RISCV_H__ */
+#endif /* __MCU_FE310_H__ */

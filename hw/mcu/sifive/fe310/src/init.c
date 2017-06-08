@@ -141,38 +141,18 @@ unsigned long get_cpu_freq()
   return cpu_freq;
 }
 
-static void uart_init(size_t baud_rate)
-{
-  GPIO_REG(GPIO_IOF_SEL) &= ~IOF0_UART0_MASK;
-  GPIO_REG(GPIO_IOF_EN) |= IOF0_UART0_MASK;
-  UART0_REG(UART_REG_DIV) = get_cpu_freq() / baud_rate - 1;
-  UART0_REG(UART_REG_TXCTRL) |= UART_TXEN;
-}
-
-int mip_val;
-int mie_val;
-int ms_val;
 /* Function called just before main() */
 void _init()
 {
-  
-  #ifndef NO_INIT
+#ifndef NO_INIT
   use_default_clocks();
   use_pll(0, 0, 1, 31, 1);
-  uart_init(115200);
 
-  //printf("core freq at %lu Hz\n", get_cpu_freq());
-
-  write_csr(mtvec, &trap_entry);
-  mip_val = read_csr(mip);
-  mie_val = read_csr(mie);
-  ms_val = read_csr(mstatus);
   if (read_csr(misa) & (1 << ('F' - 'A'))) { // if F extension is present
     write_csr(mstatus, MSTATUS_FS); // allow FPU instructions without trapping
     write_csr(fcsr, 0); // initialize rounding mode, undefined at reset
   }
-  #endif
-  
+#endif
 }
 
 /* Function called after main() finishes */
