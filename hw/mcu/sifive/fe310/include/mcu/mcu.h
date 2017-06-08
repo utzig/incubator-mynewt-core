@@ -24,6 +24,22 @@
 extern "C" {
 #endif
 
+typedef void (* interrupt_handler_t)(void);
+/*
+ * External interrupt table
+ */
+extern interrupt_handler_t plic_interrupts[];
+
+/*
+ * Set handler for extern interrupt
+ */
+void plic_set_handler(int int_num, interrupt_handler_t handler, int priority);
+
+/* Enable exteral interrupt at PLIC */
+void plic_enable_interrupt(int int_num);
+
+/* Disable exteral interrupt at PLIC */
+void plic_disable_interrupt(int int_num);
 
 #ifdef __cplusplus
 }

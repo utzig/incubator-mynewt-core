@@ -194,8 +194,8 @@ async_interrupt:
     li t0, 0x80000007         /* Timer interrupt */
     beq a0, t0, timer_interrupt_handler
     li t0, 0x80000003         /* Software interrupt */
-l1:
-    bne a0, t0, l1            /* If not software interrupt so what */
+1:
+    bne a0, t0, 1b            /* If not software interrupt so what */
     li t0, CLINT_CTRL_ADDR    /* Clear software interrutp */
     sw x0, (t0)
 #if CONTEXT_SWITCH_ON_ECALL

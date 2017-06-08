@@ -24,6 +24,9 @@
 #include <hal/hal_os_tick.h>
 #include <mcu/encoding.h>
 #include <mcu/platform.h>
+#include <mcu/mcu.h>
+
+extern void trap_entry();
 
 struct context_switch_frame {
     uint32_t  pc;
@@ -196,51 +199,26 @@ os_error_t
 os_arch_os_init(void)
 {
     os_error_t err = OS_OK;
-#if 0
-// Code from arm to remain what this section is for
-
     int i;
 
-    /* Cannot be called within an ISR */
-    err = OS_ERR_IN_ISR;
-    if (__get_IPSR() == 0) {
-        err = OS_OK;
-
-        /* Drop priority for all interrupts */
-        for (i = 0; i < sizeof(NVIC->IP); i++) {
-            NVIC->IP[i] = -1;
-        }
-
-        NVIC_SetVector(SVCall_IRQn, (uint32_t)SVC_Handler);
-        NVIC_SetVector(PendSV_IRQn, (uint32_t)PendSV_Handler);
-        NVIC_SetVector(SysTick_IRQn, (uint32_t)SysTick_Handler);
-
-        /*
-         * Install default interrupt handler, which'll print out system
-         * state at the time of the interrupt, and few other regs which
-         * should help in trying to figure out what went wrong.
-         */
-        NVIC_SetVector(NonMaskableInt_IRQn, (uint32_t)os_default_irq_asm);
-        NVIC_SetVector(HardFault_IRQn, (uint32_t)os_default_irq_asm);
-        NVIC_SetVector(-13, (uint32_t)os_default_irq_asm); /* Hardfault */
-        for (i = 0; i < NVIC_NUM_VECTORS - NVIC_USER_IRQ_OFFSET; i++) {
-            NVIC_SetVector(i, (uint32_t)os_default_irq_asm);
-        }
-
-        /* Set the PendSV interrupt exception priority to the lowest priority */
-        NVIC_SetPriority(PendSV_IRQn, PEND_SV_PRIO);
-
-        /* Set the SVC interrupt to priority 0 (highest configurable) */
-        NVIC_SetPriority(SVCall_IRQn, SVC_PRIO);
-
-        /* Check if privileged or not */
-        if ((__get_CONTROL() & 1) == 0) {
-            os_arch_init();
-        } else {
-            svc_os_arch_init();
-        }
+    /* Set all external interrupts to default handler */
+    for (i = 0; i < PLIC_NUM_INTERRUPTS; ++i) {
+        plic_interrupts[i] = os_default_irq_asm;
+        /* Default priority set to 0, never interrupt */
+        PLIC_REG(PLIC_PRIORITY_OFFSET + i * 4) = 0;
     }
-#endif
+
+    /* Disable all interrupts */
+    for (i = 0; i < (31 + PLIC_NUM_INTERRUPTS) / 8; i  += 4) {
+        PLIC_REG(PLIC_ENABLE_OFFSET + i) = 0;
+    }
+
+    /* Enable interrupts at 0 level */
+    PLIC_REG(PLIC_THRESHOLD_OFFSET) = 0;
+
+    /* Set main trap handler */
+    write_csr(mtvec, &trap_entry);
+
     os_arch_init();
 
     return err;
@@ -249,7 +227,6 @@ os_arch_os_init(void)
 uint32_t
 os_arch_start(void)
 {
-    os_sr_t sr;
     struct os_task *t;
     struct os_task fake_task;
 
@@ -264,12 +241,13 @@ os_arch_start(void)
      */
     os_sched_set_current_task(&fake_task);
 
-    OS_ENTER_CRITICAL(sr);
     /* Clean software interrupt, and enable it */
     CLINT_REG(CLINT_MSIP) = 0;
     set_csr(mie, MIP_MSIP);
+    /* Enable external interrupts */
+    set_csr(mie, MIP_MEIP);
 
-    /* Intitialize and start system clock timer */
+    /* Intitialize and start system clock timer, this enable timer interrupt */
     os_tick_init(OS_TICKS_PER_SEC, OS_TICK_PRIO);
 
     /* Mark the OS as started, right before we run our first task */
@@ -278,7 +256,8 @@ os_arch_start(void)
     /* Perform context switch */
     os_arch_ctx_sw(t);
 
-    OS_EXIT_CRITICAL(sr);
+    /* Enable interrupts */
+    set_csr(mstatus, MSTATUS_MIE);
 
     /* This should not be reached */
     return (uint32_t) (t->t_arg);
@@ -297,12 +276,6 @@ os_arch_os_start(void)
     }
 
     return err;
-}
-
-void
-external_interrupt_handler(uintptr_t mcause)
-{
-    // TODO: PLIC code here
 }
 
 void
