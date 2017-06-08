@@ -31,25 +31,14 @@ syscfg.defs:
 
     UART_0:
         description: 'Whether to enable UART0'
-        value:  0
+        value:  1
 
     UART_0_PIN_TX:
         description: 'TX pin for UART0'
-        value:  17
+        value:  1
     UART_0_PIN_RX:
         description: 'RX pin for UART0'
-        value:  16
-
-    UART_1:
-        description: 'Whether to enable UART1'
         value:  0
-
-    UART_1_PIN_TX:
-        description: 'TX pin for UART1'
-        value:  25
-    UART_1_PIN_RX:
-        description: 'RX pin for UART1'
-        value:  24
 
     QSPI_1:
         description: 'Whether to enable QSPI1'
