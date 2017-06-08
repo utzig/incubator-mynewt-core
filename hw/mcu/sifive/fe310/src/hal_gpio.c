@@ -20,12 +20,7 @@
 #include <stdlib.h>
 #include <hal/hal_gpio.h>
 #include <mcu/platform.h>
-
-static int
-pin_to_offset(int pin)
-{
-    return pin < 8 ? pin + 16 : pin - 8;
-}
+#include <bsp/bsp.h>
 
 /* GPIO interrupts */
 #define HAL_GPIO_MAX_IRQ        24

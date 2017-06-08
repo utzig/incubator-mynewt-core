@@ -35,6 +35,12 @@ extern "C" {
 extern uint8_t _ram_start;
 #define RAM_SIZE        0x8000
 
+static inline int
+pin_to_offset(int pin)
+{
+    return pin < 8 ? pin + 16 : pin - 8;
+}
+
 #ifdef __cplusplus
 }
 #endif
