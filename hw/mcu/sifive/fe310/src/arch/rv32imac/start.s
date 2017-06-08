@@ -44,6 +44,10 @@ _reset_handler:
 	bltu a0, a1, 1b
 2:
 
+	la a0, _end
+	la a1, _heap_end
+	call _sbrkInit
+
 	/* Call global constructors */
 	la a0, __libc_fini_array
 	call atexit
