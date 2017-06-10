@@ -19,39 +19,45 @@
 
 bsp.arch: rv32imac
 bsp.compiler: compiler/riscv64
-bsp.linkerscript: "hw/bsp/hifive1/hifive.ld"
-#pkg.linkerscript.bootloader.OVERWRITE: "hifive_boot.ld"
-#pkg.downloadscript: "hifive_download.sh"
-#pkg.debugscript: "hifive_debug.sh"
+bsp.linkerscript:
+    - "hw/bsp/hifive1/hifive1.ld"
+    - "hw/bsp/hifive1/hifive1_app.ld"
+bsp.linkerscript.BOOT_LOADER.OVERWRITE:
+    - "hw/bsp/hifive1/hifive1.ld"
+    - "hw/bsp/hifive1/hifive1_boot.ld"
+bsp.downloadscript: "hw/bsp/hifive1/hifive1_download.sh"
 
 bsp.flash_map:
     areas:
         # System areas.
         FLASH_AREA_BOOTLOADER:
             device: 0
-            offset: 0x20000000
-            size: 4096kB
+            # for now leave freedom bootloaer at 0x20000000
+            # newt bootloader at   0x20400000
+            # first image slot at  0x20410000
+            offset: 0x20400000
+            size: 32kB
         FLASH_AREA_IMAGE_0:
             device: 0
-            offset: 0x20400000
-            size: 0kB
+            offset: 0x20410000
+            size: 480kB
         FLASH_AREA_IMAGE_1:
             device: 0
-            offset: 0x00000000
-            size: 0kB
+            offset: 0x20510000
+            size: 480kB
         FLASH_AREA_IMAGE_SCRATCH:
             device: 0
-            offset: 0x00000000
-            size: 0kB
+            offset: 0x207FF000
+            size: 4kB
 
         # User areas.
         FLASH_AREA_REBOOT_LOG:
             user_id: 0
             device: 0
-            offset: 0x00000000
-            size: 0kB
+            offset: 0x207F0000
+            size: 48kB
         FLASH_AREA_NFFS:
             user_id: 1
             device: 0
-            offset: 0x00000000
-            size: 0kB
+            offset: 0x207FC000
+            size: 12kB
