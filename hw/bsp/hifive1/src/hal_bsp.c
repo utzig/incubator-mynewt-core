@@ -88,7 +88,7 @@ hal_bsp_flash_dev(uint8_t id)
     if (id != 0) {
         return NULL;
     }
-    return NULL;//&nrf52k_flash_dev;
+    return &e300_flash_dev;
 }
 
 const struct hal_bsp_mem_dump *

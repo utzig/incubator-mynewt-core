@@ -20,6 +20,7 @@
 #ifndef H_FE310_HAL_
 #define H_FE310_HAL_
 
+#include <stdint.h>
 #include <mcu/encoding.h>
 
 #ifdef __cplusplus
@@ -43,6 +44,8 @@ struct fe310_uart_cfg {
             set_csr(mstatus, MSTATUS_MIE);                 \
         }                                                  \
     } while(0);
+
+extern const struct hal_flash e300_flash_dev;
 
 #ifdef __cplusplus
 }
