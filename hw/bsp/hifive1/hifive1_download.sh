@@ -40,4 +40,5 @@ CFG="-f $CORE_PATH/hw/bsp/hifive1/riscv_openocd.cfg"
 
 common_file_to_load
 openocd_load
-openocd_reset_run
+# TODO: Check it this is needed later, for now it works without it
+#openocd_reset_run
