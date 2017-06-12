@@ -21,6 +21,7 @@
 #include <assert.h>
 #include "mcu/fe310_hal.h"
 #include <hal/hal_flash_int.h>
+#include <mcu/platform.h>
 
 #define E300_FLASH_SECTOR_SZ    4096
 
@@ -50,6 +51,14 @@ const struct hal_flash e300_flash_dev = {
     .hf_align = 1
 };
 
+#define FLASH_CMD_READ_STATUS_REGISTER 0x05
+#define FLASD_CMD_WRITE_ENABLE 0x06
+#define FLASH_CMD_PAGE_PROGRAM 0x02
+#define FLASH_CMD_SECTOR_ERASE 0x20
+
+#define FLASH_STATUS_BUSY 0x01
+#define FLASH_STATUS_WEN  0x02
+
 static int
 e300_flash_read(const struct hal_flash *dev, uint32_t address, void *dst,
         uint32_t num_bytes)
@@ -58,20 +67,138 @@ e300_flash_read(const struct hal_flash *dev, uint32_t address, void *dst,
     return 0;
 }
 
-/*
- * Flash write is done by writing 4 bytes at a time at a word boundary.
- */
+static int __attribute((section(".data.e300_flash_transmit")))
+e300_flash_transmit(uint8_t out_byte)
+{
+    int in_byte;
+
+    /* Empty RX fifo */
+    while ((int)SPI0_REG(SPI_REG_RXFIFO) >= 0) {
+    }
+    SPI0_REG(SPI_REG_TXFIFO) = out_byte;
+    do {
+         in_byte = SPI0_REG(SPI_REG_RXFIFO);
+    } while (in_byte < 0);
+
+    return in_byte;
+}
+
+static int __attribute((section(".data.e300_flash_wait_till_ready")))
+e300_flash_wait_till_ready(void)
+{
+    int status;
+    do {
+        SPI0_REG(SPI_REG_CSMODE) = SPI_CSMODE_HOLD;
+        e300_flash_transmit(FLASH_CMD_READ_STATUS_REGISTER);
+        /* Wait for ready */
+        status = e300_flash_transmit(0xFF);
+        SPI0_REG(SPI_REG_CSMODE) = SPI_CSMODE_AUTO;
+    } while (status & FLASH_STATUS_BUSY);
+
+    return 0;
+}
+
+static int __attribute((section(".data.e300_flash_write_enable")))
+e300_flash_write_enable(void)
+{
+    SPI0_REG(SPI_REG_CSMODE) = SPI_CSMODE_HOLD;
+    e300_flash_transmit(FLASD_CMD_WRITE_ENABLE);
+    SPI0_REG(SPI_REG_CSMODE) = SPI_CSMODE_AUTO;
+    return 0;
+}
+
+static int  __attribute((section(".data.e300_flash_write_page"))) __attribute((noinline))
+e300_flash_write_page(const struct hal_flash *dev, uint32_t address,
+                      const void *src, uint32_t num_bytes)
+{
+    int sr;
+    const uint8_t *p = src;
+    __HAL_DISABLE_INTERRUPTS(sr);
+
+    /* Diable auto mode */
+    SPI0_REG(SPI_REG_FCTRL) = 0;
+    SPI0_REG(SPI_REG_CSMODE) = SPI_CSMODE_HOLD;
+    SPI0_REG(SPI_REG_FMT) &= ~SPI_FMT_DIR(SPI_DIR_TX);
+
+    e300_flash_wait_till_ready();
+    e300_flash_write_enable();
+
+    /* Page program */
+    SPI0_REG(SPI_REG_CSMODE) = SPI_CSMODE_HOLD;
+    e300_flash_transmit(FLASH_CMD_PAGE_PROGRAM);
+    e300_flash_transmit(address >> 16);
+    e300_flash_transmit(address >> 8);
+    e300_flash_transmit(address);
+    while (num_bytes--) {
+        e300_flash_transmit(*p++);
+    }
+    SPI0_REG(SPI_REG_CSMODE) = SPI_CSMODE_AUTO;
+
+    /* Wait for ready */
+    e300_flash_wait_till_ready();
+
+    /* Enable auto mode */
+    SPI0_REG(SPI_REG_FCTRL) = 1;
+
+    __HAL_ENABLE_INTERRUPTS(sr);
+    return 0;
+}
+
 static int
 e300_flash_write(const struct hal_flash *dev, uint32_t address,
         const void *src, uint32_t num_bytes)
 {
-    return -1;
+    const int page_size = 256;
+    uint32_t page_end;
+    uint32_t chunk;
+
+    while (num_bytes > 0) {
+        page_end = (address + page_size) & ~(page_size - 1);
+        if (address + num_bytes < page_end) {
+            page_end = address + num_bytes;
+        }
+        chunk = page_end - address;
+        if (e300_flash_write_page(dev, address, src, chunk) < 0) {
+            return -1;
+        }
+        address += chunk;
+        num_bytes -= chunk;
+        src += chunk;
+    }
+    return 0;
 }
 
-static int
+static int __attribute((section(".data.e300_flash_erase_sector"))) __attribute((noinline))
 e300_flash_erase_sector(const struct hal_flash *dev, uint32_t sector_address)
 {
-    return -1;
+    int sr;
+    __HAL_DISABLE_INTERRUPTS(sr);
+
+    /* Diable auto mode */
+    SPI0_REG(SPI_REG_FCTRL) = 0;
+    SPI0_REG(SPI_REG_CSMODE) = SPI_CSMODE_HOLD;
+    SPI0_REG(SPI_REG_FMT) &= ~SPI_FMT_DIR(SPI_DIR_TX);
+
+    e300_flash_wait_till_ready();
+    e300_flash_write_enable();
+
+    /* Erase sector */
+    SPI0_REG(SPI_REG_CSMODE) = SPI_CSMODE_HOLD;
+    e300_flash_transmit(FLASH_CMD_SECTOR_ERASE);
+    e300_flash_transmit(sector_address >> 16);
+    e300_flash_transmit(sector_address >> 8);
+    e300_flash_transmit(sector_address);
+    SPI0_REG(SPI_REG_CSMODE) = SPI_CSMODE_AUTO;
+
+    /* Wait for ready */
+    e300_flash_wait_till_ready();
+
+    /* Enable auto mode */
+    SPI0_REG(SPI_REG_FCTRL) = 1;
+
+    __HAL_ENABLE_INTERRUPTS(sr);
+
+    return 0;
 }
 
 static int
