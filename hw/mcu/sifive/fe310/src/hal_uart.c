@@ -20,7 +20,7 @@
 #include "hal/hal_uart.h"
 #include "bsp/bsp.h"
 #include "mcu/fe310_hal.h"
-#include "mcu/platform.h"
+#include "env/freedom-e300-hifive1/platform.h"
 #include <mcu/mcu.h>
 
 #include <assert.h>

@@ -21,7 +21,7 @@
 #define H_FE310_HAL_
 
 #include <stdint.h>
-#include <mcu/encoding.h>
+#include <env/encoding.h>
 
 #ifdef __cplusplus
  extern "C" {

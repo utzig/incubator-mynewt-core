@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <mcu/platform.h>
+#include <env/freedom-e300-hifive1/platform.h>
 #include <mcu/mcu.h>
 #include <syscfg/syscfg.h>
 

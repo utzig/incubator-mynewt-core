@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#include <mcu/encoding.h>
-#include <mcu/platform.h>
+#include <env/encoding.h>
+#include <env/freedom-e300-hifive1/platform.h>
 #include <bits.h>
 
 // This is just for now, offsets of registers on stack can be

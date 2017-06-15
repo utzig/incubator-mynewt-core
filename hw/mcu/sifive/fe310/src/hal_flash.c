@@ -23,7 +23,7 @@
 #include <stdbool.h>
 #include "mcu/fe310_hal.h"
 #include <hal/hal_flash_int.h>
-#include <mcu/platform.h>
+#include <env/freedom-e300-hifive1/platform.h>
 
 #define E300_FLASH_SECTOR_SZ    4096
 

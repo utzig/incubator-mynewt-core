@@ -19,7 +19,7 @@
 
 #include <assert.h>
 #include <hal/hal_watchdog.h>
-#include <mcu/platform.h>
+#include <env/freedom-e300-hifive1/platform.h>
 #include <mcu/mcu.h>
 #include <mcu/fe310_hal.h>
 

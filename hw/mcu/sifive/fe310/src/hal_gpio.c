@@ -19,7 +19,7 @@
 
 #include <stdlib.h>
 #include <hal/hal_gpio.h>
-#include <mcu/platform.h>
+#include <env/freedom-e300-hifive1/platform.h>
 #include <bsp/bsp.h>
 
 /* GPIO interrupts */

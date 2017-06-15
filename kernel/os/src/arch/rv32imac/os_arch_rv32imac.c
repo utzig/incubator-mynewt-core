@@ -22,8 +22,8 @@
 
 #include <hal/hal_bsp.h>
 #include <hal/hal_os_tick.h>
-#include <mcu/encoding.h>
-#include <mcu/platform.h>
+#include <env/encoding.h>
+#include <env/freedom-e300-hifive1/platform.h>
 #include <mcu/mcu.h>
 
 extern void trap_entry();

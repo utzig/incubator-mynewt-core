@@ -20,8 +20,8 @@
 #include <os/os.h>
 #include "syscfg/syscfg.h"
 #include "hal/hal_os_tick.h"
-#include <mcu/encoding.h>
-#include <mcu/platform.h>
+#include <env/encoding.h>
+#include <env/freedom-e300-hifive1/platform.h>
 
 static uint64_t last_tick_time;
 static uint32_t ticks_per_ostick;

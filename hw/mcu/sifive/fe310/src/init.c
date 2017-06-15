@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <mcu/platform.h>
-#include <mcu/encoding.h>
+#include <env/freedom-e300-hifive1/platform.h>
+#include <env/encoding.h>
 
 extern void trap_entry();
 
