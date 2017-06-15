@@ -23,7 +23,7 @@
 #include <mcu/mcu.h>
 #include <mcu/fe310_hal.h>
 
-#if !WATCHDOG_RESET
+#if !MYNEWT_VAL(WATCHDOG_RESET) && !MYNEWT_VAL(WATCHDOG_STUB)
 static void watchdog_irq(void)
 {
     int cfg = AON_REG(AON_WDOGCFG);
@@ -40,8 +40,11 @@ static void watchdog_irq(void)
 int
 hal_watchdog_init(uint32_t expire_msecs)
 {
-    int scale = 0;
+#if !MYNEWT_VAL(WATCHDOG_STUB)
+#if !MYNEWT_VAL(WATCHDOG_RESET)
     int pending_ints;
+#endif
+    int scale = 0;
     uint64_t expiration = ((uint64_t)expire_msecs * RTC_FREQ) / 1000;
     while (expiration > 65534) {
         expiration >>= 1;
@@ -52,7 +55,7 @@ hal_watchdog_init(uint32_t expire_msecs)
         return -1;
     }
 
-#if WATCHDOG_RESET
+#if MYNEWT_VAL(WATCHDOG_RESET)
     AON_REG(AON_WDOGKEY) = AON_WDOGKEY_VALUE;
     AON_REG(AON_WDOGCFG) = AON_WDOGCFG_RSTEN | AON_WDOGCFG_ZEROCMP | scale;
 #else
@@ -75,9 +78,11 @@ hal_watchdog_init(uint32_t expire_msecs)
     } else {
         plic_enable_interrupt(INT_WDOGCMP);
     }
-#endif
+#endif /* WATCHDOG_RESET */
+
     AON_REG(AON_WDOGKEY) = AON_WDOGKEY_VALUE;
     AON_REG(AON_WDOGCMP) = (uint32_t)expiration;
+#endif /* WATCHDOG_STUB */
 
     return 0;
 }
@@ -85,14 +90,18 @@ hal_watchdog_init(uint32_t expire_msecs)
 void
 hal_watchdog_enable(void)
 {
+#if !MYNEWT_VAL(WATCHDOG_STUB)
     AON_REG(AON_WDOGKEY) = AON_WDOGKEY_VALUE;
     AON_REG(AON_WDOGCFG) |= AON_WDOGCFG_ENCOREAWAKE;
+#endif
 }
 
 void
 hal_watchdog_tickle(void)
 {
+#if !MYNEWT_VAL(WATCHDOG_STUB)
     AON_REG(AON_WDOGKEY) = AON_WDOGKEY_VALUE;
     AON_REG(AON_WDOGFEED) = AON_WDOGFEED_VALUE;
+#endif
 }
 
