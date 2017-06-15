@@ -27,3 +27,8 @@ syscfg.defs:
     USE_PLIC:
         description: >
         value: 1
+    WATCHDOG_RESET:
+        description: >
+            If 1 expired watchdog will reset platform. If 0 interrupt will
+            be generated. Set 1 in production builds.
+        value: 0

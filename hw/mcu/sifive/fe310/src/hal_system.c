@@ -17,13 +17,16 @@
  * under the License.
  */
 
-//#include <mcu/cortex_m4.h>
 #include "hal/hal_system.h"
 
 void
 hal_system_reset(void)
 {
-    while(1);
+    while(1) {
+        if (hal_debugger_connected()) {
+            asm ("ebreak");
+        }
+    }
 }
 
 int
