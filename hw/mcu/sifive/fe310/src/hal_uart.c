@@ -241,9 +241,10 @@ hal_uart_config(int port, int32_t baudrate, uint8_t databits, uint8_t stopbits,
     }
     UART0_REG(UART_REG_DIV) = get_cpu_freq() / baudrate - 1;
     /* Set threashold and stop bits, not enable yet */
-    UART0_REG(UART_REG_TXCTRL) = (4 << 16) | ((stopbits - 1) << 1);
+    UART0_REG(UART_REG_TXCTRL) = UART_TXWM(4) | ((stopbits - 1) << 1);
     /* RX anebled with interrupt when any bytes is there */
-    UART0_REG(UART_REG_RXCTRL) = (0 << 16) | 1;
+    UART0_REG(UART_REG_RXCTRL) = UART_RXWM(0) | UART_RXEN;
+    UART0_REG(UART_REG_IE) = UART_IP_RXWM;
 
     plic_enable_interrupt(INT_UART0_BASE);
 
