@@ -50,8 +50,8 @@ typedef uint32_t os_stack_t;
 /*
  * Stack sizes for common OS tasks
  */
-#define OS_SANITY_STACK_SIZE (64)
-#define OS_IDLE_STACK_SIZE (64)
+#define OS_SANITY_STACK_SIZE (96)
+#define OS_IDLE_STACK_SIZE (96)
 
 #define OS_STACK_ALIGN(__nmemb) \
     (OS_ALIGN((__nmemb), OS_STACK_ALIGNMENT))
