@@ -171,7 +171,9 @@ uart_irq_handler(void)
     }
 
     /* TX Path */
-    hal_uart_tx_fill_fifo(u);
+    if (u->u_tx_started) {
+        hal_uart_tx_fill_fifo(u);
+    }
 }
 
 int
