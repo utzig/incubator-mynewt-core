@@ -40,7 +40,7 @@ struct fe310_uart_cfg {
 
 #define __HAL_ENABLE_INTERRUPTS(x)                         \
     do {                                                   \
-        if (!x) {                                          \
+        if (x) {                                           \
             set_csr(mstatus, MSTATUS_MIE);                 \
         }                                                  \
     } while(0);
