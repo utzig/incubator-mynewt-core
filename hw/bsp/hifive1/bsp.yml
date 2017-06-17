@@ -32,10 +32,8 @@ bsp.flash_map:
         # System areas.
         FLASH_AREA_BOOTLOADER:
             device: 0
-            # for now leave freedom bootloaer at 0x20000000
-            # newt bootloader at   0x20400000
             # first image slot at  0x20410000
-            offset: 0x20400000
+            offset: 0x20000000
             size: 32kB
         FLASH_AREA_IMAGE_0:
             device: 0

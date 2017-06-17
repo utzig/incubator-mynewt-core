@@ -1,6 +1,6 @@
 MEMORY
 {
-  flash (rxai!w) : ORIGIN = 0x20400000, LENGTH = 32K
+  flash (rxai!w) : ORIGIN = 0x20000000, LENGTH = 32K
   ram (wxa!ri) : ORIGIN = 0x80000000, LENGTH = 16K
 }
 
