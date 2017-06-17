@@ -52,9 +52,15 @@ void
 external_interrupt_handler(uintptr_t mcause)
 {
     int num = PLIC_REG(PLIC_CLAIM_OFFSET);
-    if (num) {
+    /*
+     * Interrupt has some overhead, handle all pending interrupts.
+     */
+    while (num) {
+        /* Call interrupt handler */
         plic_interrupts[num]();
         /* Confirm interrupt*/
         PLIC_REG(PLIC_CLAIM_OFFSET) = num;
+        /* Check if other interupt is already pending */
+        num = PLIC_REG(PLIC_CLAIM_OFFSET);
     }
 }
