@@ -395,7 +395,7 @@ Reset_Handler:
 #endif
 
     /* FIXME: this is not the place for defines (also lack of inspiration!) */
-    ldr   r1, =0xdeadbeef
+    ldr   r1, =0xb00710ad
     cmp   r4, r1
     bne   .no_bootapi
     ldr   r1, =p_mcuboot_api_vt
