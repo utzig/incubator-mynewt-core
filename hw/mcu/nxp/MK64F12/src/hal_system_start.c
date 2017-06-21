@@ -25,7 +25,22 @@
  *        and apps/boot provide the same includes which clash!
  */
 struct mcuboot_api_itf;
-extern struct mcuboot_api_itf mcuboot_api_vt;
+
+#if defined(__arm__)
+    #define MCUBOOT_API_INIT_(m)                                            \
+        extern const struct mcuboot_api_itf mcuboot_api_vt;                 \
+        asm("mov r4, %0\n\t"                                                \
+            "mov r5, %1"  :: "r" (m), "r" (&mcuboot_api_vt) : "r4", "r5");
+#elif defined(__mips__)
+    /* TODO */
+    #define MCUBOOT_API_INIT_(m)
+#elif defined(__i386__)
+    /* TODO */
+    #define MCUBOOT_API_INIT_(m)
+#endif
+
+#define MCUBOOT_API_MAGIC             0xb00710ad
+#define MCUBOOT_API_INIT(x)           MCUBOOT_API_INIT_(MCUBOOT_API_MAGIC)
 
 /**
  * Boots the image described by the supplied image header.
@@ -59,8 +74,7 @@ hal_system_start(void *img_start)
      * This has to be done just before jumping into the app, to avoid
      * overwriting the registers...
      */
-    asm("ldr r4, =0xdeadbeef\n\t"
-        "mov r5, %0" : : "r" (&mcuboot_api_vt) : "r4", "r5");
+    MCUBOOT_API_INIT();
 
     /* Jump to image. */
     entry();
