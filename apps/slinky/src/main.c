@@ -92,7 +92,7 @@ static int test_conf_export(void (*export_func)(char *name, char *val),
 struct mcuboot_api_itf {
     uint32_t mcuboot_api_magic;
     uint32_t mcuboot_version;
-    int (*mcuboot_ioctl)(int req, void *arg);
+    int (*mcuboot_ioctl)(int req, void *data, size_t len);
 };
 
 struct mcuboot_api_itf *p_mcuboot_api_vt = NULL;
@@ -303,7 +303,7 @@ main(int argc, char **argv)
     }
 #endif
 
-    if (p_mcuboot_api_vt && p_mcuboot_api_vt->mcuboot_api_magic == 0xdeadbeef) {
+    if (p_mcuboot_api_vt && p_mcuboot_api_vt->mcuboot_api_magic == 0x8b2d7757) {
         uint32_t v;
         int i = 0;
         struct mcuboot_api_flash_info info;
@@ -312,13 +312,13 @@ main(int argc, char **argv)
         console_printf("\nMCUBOOT - version: %lu.%lu.%lu\n",
                 (v >> 24) & 0xff, (v >> 16) & 0xff, v & 0xff);
         console_printf("\nMCUBOOT - ioctl magic: %x\n",
-                p_mcuboot_api_vt->mcuboot_ioctl(0x1234, NULL));
-        rc = p_mcuboot_api_vt->mcuboot_ioctl(0, &v);
+                p_mcuboot_api_vt->mcuboot_ioctl(0x1234, NULL, 0));
+        rc = p_mcuboot_api_vt->mcuboot_ioctl(0, &v, sizeof(v));
         if (!rc) {
             console_printf("\nMCUBOOT - flash partition amount: %lu\n", v);
             for (i = 0; i < v; i++) {
                 info.index = i;
-                rc = p_mcuboot_api_vt->mcuboot_ioctl(1, &info);
+                rc = p_mcuboot_api_vt->mcuboot_ioctl(1, &info, sizeof(info));
                 if (!rc) {
                     console_printf("Partition %u: id=%d, offset=0x%lx, size=%lu\n",
                             i, info.id, info.offset, info.size);
