@@ -53,41 +53,35 @@ ENTRY(Reset_Handler)
 
 HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x10000;
 STACK_SIZE = DEFINED(__stack_size__) ? __stack_size__ : 0x0400;
-M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? 0x0400 : 0x0;
 
 /* Specify the memory areas */
 MEMORY
 {
-  m_interrupts          (RX)  : ORIGIN = 0x00008000, LENGTH = 0x00000420
-  m_flash_config        (RX)  : ORIGIN = 0x00008420, LENGTH = 0x00000010
-  m_text                (RX)  : ORIGIN = 0x00008430, LENGTH = 0x00100000-0x8430
+  m_text                (RX)  : ORIGIN = 0x00020000, LENGTH = 0x00100000-0x20000
   m_data                (RW)  : ORIGIN = 0x1FFF0000, LENGTH = 0x00010000
   m_data_2              (RW)  : ORIGIN = 0x20000000, LENGTH = 0x00030000
 }
+
+_imghdr_size = 0x200;
 
 /* Define output sections */
 SECTIONS
 {
   .imghdr (NOLOAD):
   {
-    . = . + 0x20;
-  } > m_interrupts
+    . = . + _imghdr_size;
+  } > m_text
 
   /* The startup code goes first into internal flash */
   .interrupts :
   {
     __VECTOR_TABLE = .;
     . = ALIGN(4);
+    __isr_vector_start = .;
     KEEP(*(.isr_vector))     /* Startup code */
+    __isr_vector_end = .;
     . = ALIGN(4);
-  } > m_interrupts
-
-  .flash_config :
-  {
-    . = ALIGN(4);
-    KEEP(*(.FlashConfig))    /* Flash Configuration Field (FCF) */
-    . = ALIGN(4);
-  } > m_flash_config
+  } > m_text
 
   /* The program code and other data goes into internal flash */
   .text :
@@ -178,19 +172,13 @@ SECTIONS
   __etext = .;    /* define a global symbol at end of code */
   __DATA_ROM = .; /* Symbol is used by startup for data initialization */
 
-  .interrupts_ram :
+  .vector_relocation :
   {
-    . = ALIGN(4);
-    __VECTOR_RAM__ = .;
-    __interrupts_ram_start__ = .; /* Create a global symbol at data start */
-    *(.m_interrupts_ram)     /* This is a user defined section */
-    . += M_VECTOR_RAM_SIZE;
-    . = ALIGN(4);
-    __interrupts_ram_end__ = .; /* Define a global symbol at data end */
+      . = ALIGN(4);
+      __vector_tbl_reloc__ = .;
+      . = . + (__isr_vector_end - __isr_vector_start);
+      . = ALIGN(4);
   } > m_data
-
-  __VECTOR_RAM = DEFINED(__ram_vector_table__) ? __VECTOR_RAM__ : ORIGIN(m_interrupts);
-  __RAM_VECTOR_TABLE_SIZE_BYTES = DEFINED(__ram_vector_table__) ? (__interrupts_ram_end__ - __interrupts_ram_start__) : 0x0;
 
   .data : AT(__DATA_ROM)
   {

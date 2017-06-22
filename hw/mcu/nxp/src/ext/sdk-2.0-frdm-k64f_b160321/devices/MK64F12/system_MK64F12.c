@@ -107,6 +107,7 @@
 
 #include <stdint.h>
 #include "fsl_device_registers.h"
+#include "bsp/cmsis_nvic.h"
 
 
 
@@ -138,6 +139,7 @@ void SystemInit (void) {
                  0x0100U;
 #endif /* (DISABLE_WDOG) */
 
+  NVIC_Relocate();
 }
 
 /* ----------------------------------------------------------------------------

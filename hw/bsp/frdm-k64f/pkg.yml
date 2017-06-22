@@ -34,8 +34,6 @@ pkg.cflags:
     - -DSCANF_ADVANCED_ENABLE=0
     - -DFRDM_K64F
     - -DFREEDOM
-    - -DUSE_RAM_VECTOR_TABLE
-    - -Wl,--defsym=__ram_vector_table__=1
     - -D__STARTUP_CLEAR_BSS
 
 pkg.cflags.HARDFLOAT:
