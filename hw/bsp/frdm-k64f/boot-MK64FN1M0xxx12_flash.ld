@@ -73,7 +73,9 @@ SECTIONS
   {
     __VECTOR_TABLE = .;
     . = ALIGN(4);
+    __isr_vector_start = .;
     KEEP(*(.isr_vector))     /* Startup code */
+    __isr_vector_end = .;
     . = ALIGN(4);
   } > m_interrupts
 
@@ -186,6 +188,14 @@ SECTIONS
 
   __VECTOR_RAM = DEFINED(__ram_vector_table__) ? __VECTOR_RAM__ : ORIGIN(m_interrupts);
   __RAM_VECTOR_TABLE_SIZE_BYTES = DEFINED(__ram_vector_table__) ? (__interrupts_ram_end__ - __interrupts_ram_start__) : 0x0;
+
+  .vector_relocation :
+  {
+      . = ALIGN(4);
+      __vector_tbl_reloc__ = .;
+      . = . + (__isr_vector_end - __isr_vector_start);
+      . = ALIGN(4);
+  } > m_data
 
   .data : AT(__DATA_ROM)
   {
