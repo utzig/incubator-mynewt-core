@@ -122,7 +122,7 @@ typedef struct _usb_device_endpoint_callback_message_struct
     uint8_t  *buffer;                             /*!< Transferred buffer */
     uint32_t length;                              /*!< Transferred data length */
     uint8_t  isSetup;                             /*!< Is in a setup phase */
-} usb_device_endpoint_callback_message_struct_t;
+} usb_dev_ep_cb_msg_t;
 
 /*
  * This callback function is used to notify the upper layer what the transfer
@@ -130,8 +130,7 @@ typedef struct _usb_device_endpoint_callback_message_struct
  * initialized by calling API #USB_DeviceInitEndpoint.
  */
 typedef usb_status_t (*usb_device_endpoint_callback_t)(usb_device_handle handle,
-                                                       usb_device_endpoint_callback_message_struct_t
-                                                       *message,
+                                                       usb_dev_ep_cb_msg_t *msg,
                                                        void *callbackParam);
 
 /*
@@ -248,7 +247,7 @@ typedef struct _usb_device_controller_interface_struct
     usb_device_controller_control_t deviceControl;
 } usb_device_controller_interface_struct_t;
 
-typedef struct _usb_device_struct
+typedef struct
 {
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)
     volatile uint64_t                              hwTick;
@@ -256,8 +255,8 @@ typedef struct _usb_device_struct
     usb_device_controller_handle                   controllerHandle;
     const usb_device_controller_interface_struct_t *controllerInterface;
     struct os_eventq                               *notificationQueue;
-    usb_device_callback_t                          deviceCallback;
-    usb_device_endpoint_callback_struct_t          endpointCallback[MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) << 1];
+    usb_device_callback_t                          devcb;
+    usb_device_endpoint_callback_struct_t          epcbs[MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) << 1];
     uint8_t                                        deviceAddress;
     uint8_t                                        controllerId;
     uint8_t                                        state;
@@ -265,7 +264,7 @@ typedef struct _usb_device_struct
     uint8_t                                        remotewakeup;
 #endif
     uint8_t                                        isResetting;
-} usb_device_struct_t;
+} usb_dev_t;
 
 #if defined(__cplusplus)
 extern "C" {
@@ -274,9 +273,9 @@ extern "C" {
 /*
  * This function initializes the USB device module specified by the controllerId.
  */
-usb_status_t usb_device_init(uint8_t controllerId,
-                             usb_device_callback_t deviceCallback,
-                             usb_device_handle *handle);
+usb_status_t usb_dev_init(uint8_t controllerId,
+                          usb_device_callback_t devcb,
+                          usb_device_handle *handle);
 
 /*
  * This function enables the device functionality, so that the device can be
@@ -350,7 +349,7 @@ usb_status_t usb_device_cancel(usb_device_handle handle,
 
 usb_status_t usb_dev_ep_init(usb_device_handle handle,
                              usb_device_endpoint_init_struct_t *epInit,
-                             usb_device_endpoint_callback_struct_t *endpointCallback);
+                             usb_device_endpoint_callback_struct_t *epcbs);
 
 usb_status_t usb_dev_ep_deinit(usb_device_handle handle,
                                uint8_t endpointAddress);

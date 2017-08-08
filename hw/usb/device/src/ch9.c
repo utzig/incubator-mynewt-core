@@ -701,7 +701,7 @@ _usb_device_control_cb_feedback(usb_device_handle handle,
  */
 usb_status_t
 _usb_device_control_cb(usb_device_handle handle,
-                       usb_device_endpoint_callback_message_struct_t *message,
+                       usb_dev_ep_cb_msg_t *message,
                        void *callbackParam)
 {
     usb_setup_struct_t *deviceSetup;

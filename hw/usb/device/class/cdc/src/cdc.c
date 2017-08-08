@@ -65,7 +65,7 @@
 usb_device_cdc_acm_struct_t g_cdcAcmHandle[USB_DEVICE_CONFIG_CDC_ACM_MAX_INSTANCE];
 
 static usb_status_t
-usb_device_cdc_allocate_handle(usb_device_cdc_acm_struct_t * *handle)
+usb_dev_cdc_alloc_handle(usb_device_cdc_acm_struct_t * *handle)
 {
     int32_t i;
 
@@ -80,7 +80,7 @@ usb_device_cdc_allocate_handle(usb_device_cdc_acm_struct_t * *handle)
 }
 
 static usb_status_t
-usb_device_cdc_free_handle(usb_device_cdc_acm_struct_t *handle)
+usb_dev_cdc_free_handle(usb_device_cdc_acm_struct_t *handle)
 {
     handle->handle = NULL;
     handle->configStruct = NULL;
@@ -93,13 +93,13 @@ usb_device_cdc_free_handle(usb_device_cdc_acm_struct_t *handle)
  * This function responds to the interrupt in endpoint event.
  *
  * @param handle The device handle of the CDC ACM device.
- * @param message The pointer to the message of the endpoint callback.
+ * @param msg The pointer to the message of the endpoint callback.
  * @param callbackParam The pointer to the parameter of the callback.
  */
-usb_status_t
-usb_device_cdc_interrupt_in(usb_device_handle handle,
-                            usb_device_endpoint_callback_message_struct_t *message,
-                            void *callbackParam)
+static usb_status_t
+usb_dev_cdc_interrupt_in(usb_device_handle handle,
+                         usb_dev_ep_cb_msg_t *msg,
+                         void *callbackParam)
 {
     usb_device_cdc_acm_struct_t *cdc;
 
@@ -111,9 +111,7 @@ usb_device_cdc_interrupt_in(usb_device_handle handle,
     cdc->interruptIn.isBusy = 0;
     if (cdc->configStruct && cdc->configStruct->classCallback) {
         return cdc->configStruct->classCallback(
-            (class_handle_t)cdc,
-            kUSB_DeviceCdcEventSerialStateNotif,
-            message);
+            (class_handle_t)cdc, kUSB_DeviceCdcEventSerialStateNotif, msg);
     }
 
     return kStatus_USB_Error;
@@ -123,13 +121,13 @@ usb_device_cdc_interrupt_in(usb_device_handle handle,
  * This function responds to the bulk in endpoint event.
  *
  * @param handle The device handle of the CDC ACM device.
- * @param message The pointer to the message of the endpoint callback.
+ * @param msg The pointer to the message of the endpoint callback.
  * @param callbackParam The pointer to the parameter of the callback.
  */
-usb_status_t
-usb_device_cdc_bulk_in(usb_device_handle handle,
-                       usb_device_endpoint_callback_message_struct_t *message,
-                       void *callbackParam)
+static usb_status_t
+usb_dev_cdc_bulk_in(usb_device_handle handle,
+                    usb_dev_ep_cb_msg_t *msg,
+                    void *callbackParam)
 {
     usb_device_cdc_acm_struct_t *cdc;
 
@@ -141,9 +139,7 @@ usb_device_cdc_bulk_in(usb_device_handle handle,
     cdc->bulkIn.isBusy = 0;
     if (cdc->configStruct && cdc->configStruct->classCallback) {
         return cdc->configStruct->classCallback(
-            (class_handle_t) cdc,
-            kUSB_DeviceCdcEventSendResponse,
-            message);
+            (class_handle_t) cdc, kUSB_DeviceCdcEventSendResponse, msg);
     }
 
     return kStatus_USB_Error;
@@ -153,13 +149,13 @@ usb_device_cdc_bulk_in(usb_device_handle handle,
  * This function responds to the bulk out endpoint event.
  *
  * @param handle The device handle of the CDC ACM device.
- * @param message The pointer to the message of the endpoint callback.
+ * @param msg The pointer to the message of the endpoint callback.
  * @param callbackParam The pointer to the parameter of the callback.
  */
-usb_status_t
-usb_device_cdc_bulk_out(usb_device_handle handle,
-                        usb_device_endpoint_callback_message_struct_t *message,
-                        void *callbackParam)
+static usb_status_t
+usb_dev_cdc_bulk_out(usb_device_handle handle,
+                     usb_dev_ep_cb_msg_t *msg,
+                     void *callbackParam)
 {
     usb_device_cdc_acm_struct_t *cdc;
 
@@ -171,7 +167,7 @@ usb_device_cdc_bulk_out(usb_device_handle handle,
     cdc->bulkOut.isBusy = 0;
     if (cdc->configStruct && cdc->configStruct->classCallback) {
         return cdc->configStruct->classCallback(
-            (class_handle_t)cdc, kUSB_DeviceCdcEventRecvResponse, message);
+            (class_handle_t)cdc, kUSB_DeviceCdcEventRecvResponse, msg);
     }
 
     return kStatus_USB_Error;
@@ -183,8 +179,8 @@ usb_device_cdc_bulk_out(usb_device_handle handle,
  * @param cdc The class handle of the CDC ACM class.
  * @return A USB error code or kStatus_USB_Success.
  */
-usb_status_t
-usb_device_cdc_endpoints_init(usb_device_cdc_acm_struct_t *cdc)
+static usb_status_t
+usb_dev_cdc_endpoints_init(usb_device_cdc_acm_struct_t *cdc)
 {
     usb_device_interface_list_t *interfaceList;
     usb_device_interface_struct_t *interface = NULL;
@@ -244,7 +240,7 @@ usb_device_cdc_endpoints_init(usb_device_cdc_acm_struct_t *cdc)
         if (dir == USB_IN && epInitStruct.transferType == USB_ENDPOINT_INTERRUPT) {
             cdc->interruptIn.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
             cdc->interruptIn.isBusy = 0;
-            epCallback.callbackFn = usb_device_cdc_interrupt_in;
+            epCallback.callbackFn = usb_dev_cdc_interrupt_in;
         }
 
         epCallback.callbackParam = cdc;
@@ -281,11 +277,11 @@ usb_device_cdc_endpoints_init(usb_device_cdc_acm_struct_t *cdc)
         if (dir == USB_IN && epInitStruct.transferType == USB_ENDPOINT_BULK) {
             cdc->bulkIn.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
             cdc->bulkIn.isBusy = 0;
-            epCallback.callbackFn = usb_device_cdc_bulk_in;
+            epCallback.callbackFn = usb_dev_cdc_bulk_in;
         } else if (dir == USB_OUT && epInitStruct.transferType == USB_ENDPOINT_BULK) {
             cdc->bulkOut.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
             cdc->bulkOut.isBusy = 0;
-            epCallback.callbackFn = usb_device_cdc_bulk_out;
+            epCallback.callbackFn = usb_dev_cdc_bulk_out;
         }
         epCallback.callbackParam = cdc;
         err = usb_dev_ep_init(cdc->handle, &epInitStruct, &epCallback);
@@ -300,8 +296,8 @@ usb_device_cdc_endpoints_init(usb_device_cdc_acm_struct_t *cdc)
  * @param handle The class handle of the CDC ACM class.
  * @return A USB error code or kStatus_USB_Success.
  */
-usb_status_t
-usb_device_cdc_endpoints_deinit(usb_device_cdc_acm_struct_t *handle)
+static usb_status_t
+usb_dev_cdc_endpoints_deinit(usb_device_cdc_acm_struct_t *handle)
 {
     usb_status_t err = kStatus_USB_Error;
     int i;
@@ -326,7 +322,7 @@ usb_device_cdc_endpoints_deinit(usb_device_cdc_acm_struct_t *handle)
 }
 
 usb_status_t
-usb_device_cdc_event(void *handle, uint32_t event, void *param)
+usb_dev_cdc_event(void *handle, uint32_t event, void *param)
 {
     usb_device_cdc_acm_struct_t *cdcAcmHandle;
     usb_device_cdc_acm_request_param_struct_t reqParam;
@@ -356,10 +352,10 @@ usb_device_cdc_event(void *handle, uint32_t event, void *param)
             break;
         }
 
-        err = usb_device_cdc_endpoints_deinit(cdcAcmHandle);
+        err = usb_dev_cdc_endpoints_deinit(cdcAcmHandle);
         cdcAcmHandle->configuration = *temp8;
         cdcAcmHandle->alternate = 0;
-        err = usb_device_cdc_endpoints_init(cdcAcmHandle);
+        err = usb_dev_cdc_endpoints_init(cdcAcmHandle);
         if (kStatus_USB_Success != err) {
             //usb_echo(
             //    "kUSB_DeviceClassEventSetConfiguration, usb_dev_ep_init fail\n");
@@ -379,9 +375,9 @@ usb_device_cdc_event(void *handle, uint32_t event, void *param)
         if (alternate == cdcAcmHandle->alternate) {
             break;
         }
-        err = usb_device_cdc_endpoints_deinit(cdcAcmHandle);
+        err = usb_dev_cdc_endpoints_deinit(cdcAcmHandle);
         cdcAcmHandle->alternate = alternate;
-        err = usb_device_cdc_endpoints_init(cdcAcmHandle);
+        err = usb_dev_cdc_endpoints_init(cdcAcmHandle);
         if (kStatus_USB_Success != err) {
             //usb_echo(
             //    "kUSB_DeviceClassEventSetInterface, usb_dev_ep_init fail\n");
@@ -513,14 +509,14 @@ usb_device_cdc_event(void *handle, uint32_t event, void *param)
 }
 
 usb_status_t
-usb_device_cdc_init(uint8_t controllerId,
-                    usb_device_class_config_struct_t *config,
-                    class_handle_t *handle)
+usb_dev_cdc_init(uint8_t controllerId,
+                 usb_dev_class_config_t *config,
+                 class_handle_t *handle)
 {
     usb_device_cdc_acm_struct_t *cdcAcmHandle;
     usb_status_t err = kStatus_USB_Error;
 
-    err = usb_device_cdc_allocate_handle(&cdcAcmHandle);
+    err = usb_dev_cdc_alloc_handle(&cdcAcmHandle);
 
     if (kStatus_USB_Success != err) {
         return err;
@@ -557,7 +553,7 @@ usb_device_cdc_init(uint8_t controllerId,
 }
 
 usb_status_t
-usb_device_cdc_deinit(class_handle_t handle)
+usb_dev_cdc_deinit(class_handle_t handle)
 {
     usb_device_cdc_acm_struct_t *cdc;
     usb_status_t err = kStatus_USB_Error;
@@ -582,14 +578,14 @@ usb_device_cdc_deinit(class_handle_t handle)
     }
 #endif
 
-    err = usb_device_cdc_endpoints_deinit(cdc);
-    usb_device_cdc_free_handle(cdc);
+    err = usb_dev_cdc_endpoints_deinit(cdc);
+    usb_dev_cdc_free_handle(cdc);
     return err;
 }
 
 usb_status_t
-usb_device_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buffer,
-                    uint32_t length)
+usb_dev_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buffer,
+                 uint32_t length)
 {
     usb_device_cdc_acm_struct_t *cdc;
     usb_status_t err = kStatus_USB_Error;
@@ -625,8 +621,8 @@ usb_device_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buffer,
 }
 
 usb_status_t
-usb_device_cdc_recv(class_handle_t handle, uint8_t ep, uint8_t *buffer,
-                    uint32_t length)
+usb_dev_cdc_recv(class_handle_t handle, uint8_t ep, uint8_t *buffer,
+                 uint32_t length)
 {
     usb_device_cdc_acm_struct_t *cdc;
     usb_status_t err = kStatus_USB_Error;

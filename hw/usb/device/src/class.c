@@ -108,9 +108,9 @@ static const usb_device_class_map_t s_UsbDeviceClassInterfaceMap[] = {
 #endif
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_CDC_ACM)
     {
-        .init   = usb_device_cdc_init,
-        .deinit = usb_device_cdc_deinit,
-        .cb     = usb_device_cdc_event,
+        .init   = usb_dev_cdc_init,
+        .deinit = usb_dev_cdc_deinit,
+        .cb     = usb_dev_cdc_event,
         .type   = kUSB_DeviceClassTypeCdc,
     },
 #endif
@@ -401,7 +401,7 @@ usb_device_class_cb(usb_device_handle handle, uint32_t event, void *param)
  *                           class handle, but there is only one device handle.
  *                           So the handle points to a device instead of a class.
  *                           And the class handle can be got from the
- *                           #usb_device_class_config_struct_t::classHandle after
+ *                           #usb_dev_class_config_t::classHandle after
  *                           the function successfully.
  */
 usb_status_t
@@ -425,7 +425,7 @@ usb_device_class_init(uint8_t controllerId,
     }
 
     classHandle->configList = configList;
-    err = usb_device_init(controllerId, usb_device_class_cb, &classHandle->handle);
+    err = usb_dev_init(controllerId, usb_device_class_cb, &classHandle->handle);
     if (err != kStatus_USB_Success) {
         usb_device_deinit(classHandle->handle);
         usb_device_class_free_handle(controllerId);

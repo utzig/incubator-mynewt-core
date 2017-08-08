@@ -51,33 +51,6 @@
 
 #include "MK64F12.h"
 
-/*
- * The following MACROs (USB_GLOBAL, USB_BDT, USB_RAM_ADDRESS_ALIGNMENT, etc)
- * are only used for USB device stack. The USB device global variables are
- * put into the section m_usb_global and m_usb_bdt or the section
- * .bss.m_usb_global and .bss.m_usb_bdt by using the MACRO USB_GLOBAL and
- * USB_BDT. In this way, the USB device global variables can be linked into
- * USB dedicated RAM by USB_STACK_USE_DEDICATED_RAM. The MACRO
- * USB_STACK_USE_DEDICATED_RAM is used to decide the USB stack uses dedicated
- * RAM or not. The value of the marco can be set as 0,
- * USB_STACK_DEDICATED_RAM_TYPE_BDT_GLOBAL, or USB_STACK_DEDICATED_RAM_TYPE_BDT.
- * The MACRO USB_STACK_DEDICATED_RAM_TYPE_BDT_GLOBAL means USB device global
- * variables, including USB_BDT and USB_GLOBAL, are put into the USB dedicated
- * RAM. This feature can only be enabled when the USB dedicated RAM is not less
- * than 2K Bytes. The MACRO USB_STACK_DEDICATED_RAM_TYPE_BDT means USB device
- * global variables, only including USB_BDT, are put into the USB dedicated
- * RAM, the USB_GLOBAL will be put into .bss section. This feature is used for
- * some SOCs, the USB dedicated RAM size is not more than 512 Bytes.
- */
-#define USB_STACK_DEDICATED_RAM_TYPE_BDT_GLOBAL 1
-#define USB_STACK_DEDICATED_RAM_TYPE_BDT 2
-
-#define USB_RAM_ADDRESS_ALIGNMENT(n) __attribute__((aligned(n)))
-//#define USB_GLOBAL __attribute__((section("m_usb_global, \"aw\", %nobits @")))
-//#define USB_BDT __attribute__((section("m_usb_bdt, \"aw\", %nobits @")))
-
-#define USB_GLOBAL_DEDICATED_RAM \
-    __attribute__((section("m_usb_global, \"aw\", %nobits @")))
 #define USB_DATA_ALIGNMENT
 
 #define USB_KHCI_BDT_DEVICE_OUT_TOKEN     0x01
@@ -114,11 +87,11 @@ typedef struct
             uint32_t zlt : 1;
         } stateBitField;
     } stateUnion;
-} usb_device_khci_endpoint_state_struct_t;
+} kinetis_usb_dev_ep_state_t;
 
-typedef struct _usb_device_khci_state_struct
+typedef struct
 {
-    usb_device_struct_t *deviceHandle; /*!< Device handle used to identify the device object belongs to */
+    usb_dev_t           *dev;
     uint8_t             *bdt;
     volatile USB_Type   *registers;
     uint8_t             setupPacketBuffer[USB_SETUP_PACKET_SIZE * 2]; /*!< The setup request buffer */
@@ -133,7 +106,7 @@ typedef struct _usb_device_khci_state_struct
                                             When the transfer is done, the received data, kept in dmaAlignBuffer, is copied
                                             to the transferBuffer, and the flag isDmaAlignBufferInusing is cleared.
                                           */
-    usb_device_khci_endpoint_state_struct_t endpointState[MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) * 2];
+    kinetis_usb_dev_ep_state_t endpointState[MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) * 2];
     uint8_t isDmaAlignBufferInusing;
     uint8_t isResetting;
     uint8_t controllerId;
@@ -141,68 +114,7 @@ typedef struct _usb_device_khci_state_struct
 #if defined(USB_DEVICE_CONFIG_OTG)
     uint8_t otgStatus;
 #endif
-} usb_device_khci_state_struct_t;
-
-/*
- * Initializes the USB device KHCI instance.
- */
-usb_status_t USB_DeviceKhciInit(uint8_t controllerId,
-                                usb_device_handle handle,
-                                usb_device_controller_handle *khciHandle);
-
-/*
- * Deinitializes the USB device KHCI instance.
- */
-usb_status_t USB_DeviceKhciDeinit(usb_device_controller_handle khciHandle);
-
-/*!
- * Sends data through a specified endpoint.
- *
- * @note The return value indicates whether the sending request is successful
- * or not. The transfer completion is notified by the corresponding callback
- * function. Currently, only one transfer request can be supported for a
- * specific endpoint. If there is a specific requirement to support multiple
- * transfer requests for a specific endpoint, the application should implement
- * a queue in the application level. The subsequent transfer can begin only
- * when the previous transfer is done (a notification is obtained through the
- * endpoint callback).
- */
-usb_status_t USB_DeviceKhciSend(usb_device_controller_handle khciHandle,
-                                uint8_t endpointAddress,
-                                uint8_t *buffer,
-                                uint32_t length);
-
-/*!
- * Receives data through a specified endpoint.
- *
- * @note The return value indicates whether the receiving request is successful or not. The transfer completion is
- * notified by the
- * corresponding callback function.
- * Currently, only one transfer request can be supported for a specific endpoint.
- * If there is a specific requirement to support multiple transfer requests for a specific endpoint, the application
- * should implement a queue in the application level.
- * The subsequent transfer can begin only when the previous transfer is done (a notification is obtained through the
- * endpoint
- * callback).
- */
-usb_status_t USB_DeviceKhciRecv(usb_device_controller_handle khciHandle,
-                                uint8_t endpointAddress,
-                                uint8_t *buffer,
-                                uint32_t length);
-
-/*
- * Cancels the pending transfer in a specified endpoint.
- */
-usb_status_t USB_DeviceKhciCancel(usb_device_controller_handle khciHandle,
-                                  uint8_t ep);
-
-/*
- * Controls the status of the selected item.
- */
-usb_status_t USB_DeviceKhciControl(usb_device_controller_handle khciHandle,
-                                   usb_device_control_type_t type,
-                                   void *param);
-
+} kinetis_usb_dev_state_t;
 
 void usb_hal_init_clocks(void);
 const usb_device_controller_interface_struct_t * usb_hal_controller_interface(void);

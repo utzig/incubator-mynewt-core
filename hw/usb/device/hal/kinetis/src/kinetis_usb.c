@@ -69,7 +69,7 @@
 
 static __attribute__((aligned(512))) uint8_t bdt_buffer[512];
 
-static usb_device_khci_state_struct_t g_kinetis_usb_dev_state;
+static kinetis_usb_dev_state_t g_kinetis_usb_dev_state;
 
 #define DMA_ALIGN_LEN 64
 static uint32_t g_kinetis_usb_dma_buffer[((DMA_ALIGN_LEN - 1) >> 2) + 1];
@@ -140,9 +140,8 @@ _init_cb_message_with_code(usb_device_callback_message_struct_t *message,
  * Start a transfer by writing the BDT.
  */
 static usb_status_t
-USB_DeviceKhciEndpointTransfer(usb_device_khci_state_struct_t *state,
-                               uint8_t ep, uint8_t dir,
-                               uint8_t *buffer, uint32_t len)
+_kinetis_usb_dev_ep_txfer(kinetis_usb_dev_state_t *state, uint8_t ep,
+                          uint8_t dir, uint8_t *buffer, uint32_t len)
 {
     uint32_t index = ((uint32_t)ep << 1) | (uint32_t)dir;
     uint32_t odd;
@@ -175,9 +174,9 @@ USB_DeviceKhciEndpointTransfer(usb_device_khci_state_struct_t *state,
  * receiving the host's setup packet.
  */
 static void
-USB_DeviceKhciPrimeNextSetup(usb_device_khci_state_struct_t *state)
+USB_DeviceKhciPrimeNextSetup(kinetis_usb_dev_state_t *state)
 {
-    usb_device_khci_endpoint_state_struct_t *epstate;
+    kinetis_usb_dev_ep_state_t *epstate;
 
     epstate = &state->endpointState[(USB_CONTROL_ENDPOINT << 1) | USB_OUT];
 
@@ -199,12 +198,12 @@ USB_DeviceKhciPrimeNextSetup(usb_device_khci_state_struct_t *state)
     epstate->stateUnion.stateBitField.dmaAlign = 1;
     epstate->stateUnion.stateBitField.data0 = 0;
 
-    USB_DeviceKhciEndpointTransfer(state, USB_CONTROL_ENDPOINT, USB_OUT,
-            epstate->transferBuffer, USB_SETUP_PACKET_SIZE);
+    _kinetis_usb_dev_ep_txfer(state, USB_CONTROL_ENDPOINT, USB_OUT,
+                              epstate->transferBuffer, USB_SETUP_PACKET_SIZE);
 }
 
 static void
-USB_DeviceKhciSetDefaultState(usb_device_khci_state_struct_t *state)
+_kinetis_usb_dev_set_dflt(kinetis_usb_dev_state_t *state)
 {
     uint8_t interruptFlag;
     int i;
@@ -254,7 +253,7 @@ USB_DeviceKhciSetDefaultState(usb_device_khci_state_struct_t *state)
 }
 
 static usb_status_t
-_kinetis_usb_dev_ep_init(usb_device_khci_state_struct_t *state,
+_kinetis_usb_dev_ep_init(kinetis_usb_dev_state_t *state,
                          usb_device_endpoint_init_struct_t *epInit)
 {
     uint16_t maxPacketSize = epInit->maxPacketSize;
@@ -295,7 +294,7 @@ _kinetis_usb_dev_ep_init(usb_device_khci_state_struct_t *state,
 }
 
 static usb_status_t
-_kinetis_usb_dev_ep_deinit(usb_device_khci_state_struct_t *state, uint8_t endp)
+_kinetis_usb_dev_ep_deinit(kinetis_usb_dev_state_t *state, uint8_t endp)
 {
     uint8_t ep = USB_EP_NUMBER(endp);
     uint8_t dir = USB_EP_DIR(endp);
@@ -310,8 +309,7 @@ _kinetis_usb_dev_ep_deinit(usb_device_khci_state_struct_t *state, uint8_t endp)
 }
 
 static usb_status_t
-_kinetis_usb_dev_ep_stall(usb_device_khci_state_struct_t *state,
-                          uint8_t ep)
+_kinetis_usb_dev_ep_stall(kinetis_usb_dev_state_t *state, uint8_t ep)
 {
     uint8_t endpoint = USB_EP_NUMBER(ep);
     uint8_t direction = USB_EP_DIR(ep);
@@ -344,7 +342,7 @@ _kinetis_usb_dev_ep_stall(usb_device_khci_state_struct_t *state,
  * Un-stall a specified endpoint.
  */
 static usb_status_t
-_kinetis_usb_dev_ep_unstall(usb_device_khci_state_struct_t *state, uint8_t ep)
+_kinetis_usb_dev_ep_unstall(kinetis_usb_dev_state_t *state, uint8_t ep)
 {
     uint32_t control;
     uint8_t endpoint = USB_EP_NUMBER(ep);
@@ -384,7 +382,7 @@ _kinetis_usb_dev_ep_unstall(usb_device_khci_state_struct_t *state, uint8_t ep)
  * Handle the token done interrupt.
  */
 static void
-_kinetis_usb_dev_tokdone(usb_device_khci_state_struct_t *state)
+_kinetis_usb_dev_tokdone(kinetis_usb_dev_state_t *state)
 {
     uint32_t control;
     uint32_t length;
@@ -472,17 +470,14 @@ _kinetis_usb_dev_tokdone(usb_device_khci_state_struct_t *state)
                      */
                     if (USB_SHORT_FROM_LITTLE_ENDIAN(setup_packet->wLength) >
                         state->endpointState[index].transferLength) {
-                        (void)USB_DeviceKhciEndpointTransfer(state,
-                                                             endpoint, USB_IN,
-                                                             (uint8_t *)NULL,
-                                                             0);
+                        (void)_kinetis_usb_dev_ep_txfer(state, endpoint,
+                                                        USB_IN, NULL, 0);
                         return;
                     }
                 } else if (state->endpointState[index].stateUnion.
                            stateBitField.zlt) {
-                    (void)USB_DeviceKhciEndpointTransfer(state, endpoint,
-                                                         USB_IN,
-                                                         (uint8_t *)NULL, 0);
+                    (void)_kinetis_usb_dev_ep_txfer(state, endpoint, USB_IN,
+                                                    NULL, 0);
                     return;
                 }
             }
@@ -554,13 +549,13 @@ _kinetis_usb_dev_tokdone(usb_device_khci_state_struct_t *state)
     message.isSetup = isSetup;
     message.code = endpoint | (uint8_t)(((uint32_t)direction << 0x07));
 
-    usb_dev_notify(state->deviceHandle, &message);
+    usb_dev_notify(state->dev, &message);
 
     state->registers->CTL &= ~USB_CTL_TXSUSPENDTOKENBUSY_MASK;
 }
 
 static void
-_kinetis_usb_dev_reset(usb_device_khci_state_struct_t *state)
+_kinetis_usb_dev_reset(kinetis_usb_dev_state_t *state)
 {
     usb_device_callback_message_struct_t message;
     volatile USB_Type *regs = state->registers;
@@ -574,7 +569,7 @@ _kinetis_usb_dev_reset(usb_device_khci_state_struct_t *state)
 #endif
 
     _init_cb_message_with_code(&message, kUSB_DeviceNotifyBusReset);
-    usb_dev_notify(state->deviceHandle, &message);
+    usb_dev_notify(state->dev, &message);
 }
 
 /* The USB suspend and resume signals need to be detected and handled when the
@@ -582,7 +577,7 @@ _kinetis_usb_dev_reset(usb_device_khci_state_struct_t *state)
  */
 #if MYNEWT_VAL(USB_KINETIS_LOW_POWER_MODE)
 static void
-_kinetis_usb_dev_sleep(usb_device_khci_state_struct_t *state)
+_kinetis_usb_dev_sleep(kinetis_usb_dev_state_t *state)
 {
     usb_device_callback_message_struct_t message;
     volatile USB_Type *regs = state->registers;
@@ -601,7 +596,7 @@ _kinetis_usb_dev_sleep(usb_device_khci_state_struct_t *state)
 }
 
 static void
-_kinetis_usb_dev_resume(usb_device_khci_state_struct_t *state)
+_kinetis_usb_dev_resume(kinetis_usb_dev_state_t *state)
 {
     usb_device_callback_message_struct_t message;
     volatile USB_Type *regs = state->registers;
@@ -622,7 +617,7 @@ _kinetis_usb_dev_resume(usb_device_khci_state_struct_t *state)
 #if defined(USB_DEVICE_CONFIG_DETACH_ENABLE) && \
     defined(FSL_FEATURE_USB_KHCI_VBUS_DETECT_ENABLED)
 static void
-_kinetis_usb_dev_vbus_rising(usb_device_khci_state_struct_t *state)
+_kinetis_usb_dev_vbus_rising(kinetis_usb_dev_state_t *state)
 {
     usb_device_callback_message_struct_t message;
     volatile USB_Type *regs = state->regs;
@@ -635,7 +630,7 @@ _kinetis_usb_dev_vbus_rising(usb_device_khci_state_struct_t *state)
 }
 
 static void
-_kinetis_usb_dev_vbus_falling(usb_device_khci_state_struct_t *state)
+_kinetis_usb_dev_vbus_falling(kinetis_usb_dev_state_t *state)
 {
     usb_device_callback_message_struct_t message;
 
@@ -649,7 +644,7 @@ _kinetis_usb_dev_vbus_falling(usb_device_khci_state_struct_t *state)
 
 #if 0
 void
-kinetis_usb_dev_sof(usb_device_khci_state_struct_t *state)
+kinetis_usb_dev_sof(kinetis_usb_dev_state_t *state)
 {
     state->registers->ISTAT = USBx_ISTAT_SOFTOK;
     state->registers->ISTAT = USBx_ISTAT_RESUME;
@@ -657,7 +652,7 @@ kinetis_usb_dev_sof(usb_device_khci_state_struct_t *state)
 #endif
 
 static void
-_kinetis_usb_dev_stall(usb_device_khci_state_struct_t *state)
+_kinetis_usb_dev_stall(kinetis_usb_dev_state_t *state)
 {
     while (state->registers->ISTAT & USBx_ISTAT_STALL) {
         state->registers->ISTAT = USBx_ISTAT_STALL;
@@ -677,7 +672,7 @@ _kinetis_usb_dev_stall(usb_device_khci_state_struct_t *state)
 
 #if defined(USB_DEVICE_CONFIG_KHCI_ERROR_HANDLING)
 static void
-_kinetis_usb_dev_error(usb_device_khci_state_struct_t *state)
+_kinetis_usb_dev_error(kinetis_usb_dev_state_t *state)
 {
     usb_device_callback_message_struct_t message;
 
@@ -693,7 +688,7 @@ _kinetis_usb_init(uint8_t controllerId,
                   usb_device_handle handle,
                   usb_device_controller_handle *khandle)
 {
-    usb_device_khci_state_struct_t *state;
+    kinetis_usb_dev_state_t *state;
     volatile USB_Type *regs;
 
     state = &g_kinetis_usb_dev_state;
@@ -736,10 +731,10 @@ _kinetis_usb_init(uint8_t controllerId,
     PMC->REGSC |= PMC_REGSC_BGEN_MASK | PMC_REGSC_VLPO_MASK;
 #endif
 
-    USB_DeviceKhciSetDefaultState(state);
+    _kinetis_usb_dev_set_dflt(state);
 
     *khandle = state;
-    state->deviceHandle = (usb_device_struct_t *)handle;
+    state->dev = (usb_dev_t *)handle;
 
     return 0;
 }
@@ -753,7 +748,7 @@ _kinetis_usb_deinit(usb_device_controller_handle handle)
         return kStatus_USB_InvalidHandle;
     }
 
-    regs = ((usb_device_khci_state_struct_t *) handle)->registers;
+    regs = ((kinetis_usb_dev_state_t *) handle)->registers;
 
     regs->ISTAT = 0xFF;
     regs->INTEN &= ~0xFF;
@@ -783,8 +778,7 @@ _kinetis_usb_send(usb_device_controller_handle handle,
                   uint8_t *buffer,
                   uint32_t length)
 {
-    usb_device_khci_state_struct_t *state =
-        (usb_device_khci_state_struct_t *)handle;
+    kinetis_usb_dev_state_t *state = (kinetis_usb_dev_state_t *)handle;
     uint32_t index = (USB_EP_NUMBER(endpointAddress) << 1) | USB_IN;
     usb_status_t error = kStatus_USB_Error;
 
@@ -807,8 +801,8 @@ _kinetis_usb_send(usb_device_controller_handle handle,
 
     /* Send data when the device is not resetting. */
     if (!state->isResetting) {
-        error = USB_DeviceKhciEndpointTransfer(state,
-            USB_EP_NUMBER(endpointAddress), USB_IN,
+        error = _kinetis_usb_dev_ep_txfer(state, USB_EP_NUMBER(endpointAddress),
+            USB_IN,
             (uint8_t *)((uint32_t)state->endpointState[index].transferBuffer +
                         (uint32_t)state->endpointState[index].transferDone),
             length);
@@ -839,7 +833,7 @@ _kinetis_usb_recv(usb_device_controller_handle handle,
                   uint8_t *buffer,
                   uint32_t len)
 {
-    usb_device_khci_state_struct_t *state = (usb_device_khci_state_struct_t *)handle;
+    kinetis_usb_dev_state_t *state = (kinetis_usb_dev_state_t *)handle;
     uint32_t index = (USB_EP_NUMBER(ep) << 1) | USB_OUT;
     usb_status_t error = kStatus_USB_Error;
 
@@ -874,8 +868,8 @@ _kinetis_usb_recv(usb_device_controller_handle handle,
 
         /* Receive data when the device is not resetting. */
         if (!state->isResetting) {
-            error = USB_DeviceKhciEndpointTransfer(state, USB_EP_NUMBER(ep),
-                                                   USB_OUT, buffer, len);
+            error = _kinetis_usb_dev_ep_txfer(state, USB_EP_NUMBER(ep), USB_OUT,
+                                              buffer, len);
         }
     }
     return error;
@@ -884,7 +878,7 @@ _kinetis_usb_recv(usb_device_controller_handle handle,
 static usb_status_t
 _kinetis_usb_cancel(usb_device_controller_handle handle, uint8_t ep)
 {
-    usb_device_khci_state_struct_t *state = (usb_device_khci_state_struct_t *)handle;
+    kinetis_usb_dev_state_t *state = (kinetis_usb_dev_state_t *)handle;
     usb_device_callback_message_struct_t message;
     //FIXME: should not be USB_EP_DIR???
     uint8_t index = (USB_EP_NUMBER(ep) << 1) | USB_EP_DIR(ep);
@@ -896,7 +890,7 @@ _kinetis_usb_cancel(usb_device_controller_handle handle, uint8_t ep)
         message.code = ep;
         message.isSetup = 0;
         state->endpointState[index].stateUnion.stateBitField.transferring = 0;
-        usb_dev_notify(state->deviceHandle, &message);
+        usb_dev_notify(state->dev, &message);
     }
     return kStatus_USB_Success;
 }
@@ -905,10 +899,10 @@ static usb_status_t
 _kinetis_usb_control(usb_device_controller_handle handle,
                      usb_device_control_type_t type, void *param)
 {
-    usb_device_khci_state_struct_t *state = NULL;
+    kinetis_usb_dev_state_t *state = NULL;
     volatile USB_Type *regs = NULL;
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)
-    usb_device_struct_t *devhandle;
+    usb_dev_t *dev;
     uint64_t startTick;
 #endif
     usb_status_t err = kStatus_USB_Error;
@@ -917,11 +911,11 @@ _kinetis_usb_control(usb_device_controller_handle handle,
         return kStatus_USB_InvalidHandle;
     }
 
-    state = (usb_device_khci_state_struct_t *) handle;
+    state = (kinetis_usb_dev_state_t *) handle;
     regs = state->registers;
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)
-    devhandle = (usb_device_struct_t *)state->deviceHandle;
+    dev = (usb_dev_t *) state->dev;
 #endif
 
     switch (type) {
@@ -1028,7 +1022,7 @@ _kinetis_usb_control(usb_device_controller_handle handle,
             _kinetis_usb_dev_ep_deinit(state, count | (USB_IN << 7));
             _kinetis_usb_dev_ep_deinit(state, count | (USB_OUT << 7));
         }
-        USB_DeviceKhciSetDefaultState(state);
+        _kinetis_usb_dev_set_dflt(state);
         err = kStatus_USB_Success;
         break;
     case USB_DEV_CTRL_GET_SPEED:
@@ -1062,16 +1056,16 @@ _kinetis_usb_control(usb_device_controller_handle handle,
 static void
 kinetis_usb_dev_isr(void)
 {
-    usb_device_struct_t *handle = (usb_device_struct_t *)g_handle;
-    usb_device_khci_state_struct_t *state;
+    usb_dev_t *dev = (usb_dev_t *) g_handle;
+    kinetis_usb_dev_state_t *state;
     volatile USB_Type *regs = NULL;
     uint8_t status;
 
-    if (!handle) {
+    if (!dev) {
         return;
     }
 
-    state = (usb_device_khci_state_struct_t *)(handle->controllerHandle);
+    state = (kinetis_usb_dev_state_t *) dev->controllerHandle;
     regs = state->registers;
 
     status = regs->ISTAT;
@@ -1168,10 +1162,10 @@ static const usb_device_controller_interface_struct_t kinetis_interface = {
 };
 
 usb_status_t
-USB_DeviceErrorNotification(usb_device_struct_t *handle,
+USB_DeviceErrorNotification(usb_dev_t *dev,
                             usb_device_callback_message_struct_t *message)
 {
-    return handle->deviceCallback(handle, kUSB_DeviceEventError, NULL);
+    return dev->devcb(dev, kUSB_DeviceEventError, NULL);
 }
 
 void

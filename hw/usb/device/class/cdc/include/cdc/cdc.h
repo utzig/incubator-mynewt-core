@@ -147,7 +147,7 @@ typedef struct
 typedef struct
 {
     usb_device_handle handle;                           /*!< The handle of the USB device. */
-    usb_device_class_config_struct_t *configStruct;     /*!< The class configure structure. */
+    usb_dev_class_config_t *configStruct;               /*!< The class configure structure. */
     usb_device_interface_struct_t *commInterfaceHandle; /*!< The CDC communication interface handle. */
     usb_device_interface_struct_t *dataInterfaceHandle; /*!< The CDC data interface handle. */
     usb_device_cdc_acm_pipe_t bulkIn;                   /*!< The bulk in pipe for sending packet to host. */
@@ -175,26 +175,26 @@ extern "C" {
  * @param controllerId The ID of the controller. The value can be chosen from the
  *      kUSB_ControllerKhci0, kUSB_ControllerKhci1, kUSB_ControllerEhci0, or
  *      kUSB_ControllerEhci1.
- * @param config The user configuration structure of type usb_device_class_config_struct_t.
+ * @param config The user configuration structure of type usb_dev_class_config_t.
  *      The user populates the members of this structure and passes the pointer
  *      of this structure into this function.
  */
-usb_status_t usb_device_cdc_init(uint8_t controllerId,
-                                 usb_device_class_config_struct_t *config,
-                                 class_handle_t *handle);
+usb_status_t usb_dev_cdc_init(uint8_t controllerId,
+                              usb_dev_class_config_t *config,
+                              class_handle_t *handle);
 
 /*!
  * This function destroys the mutex for each pipe, deinitializes each endpoint
  * of the CDC ACM class and frees the CDC ACM class handle.
  */
-usb_status_t usb_device_cdc_deinit(class_handle_t handle);
+usb_status_t usb_dev_cdc_deinit(class_handle_t handle);
 
 /*!
  * This function responds to various events including the common device events
  * and the class-specific events. For class-specific events, it calls the class
  * callback defined in the application to deal with the class-specific event.
  */
-usb_status_t usb_device_cdc_event(void *handle, uint32_t event, void *param);
+usb_status_t usb_dev_cdc_event(void *handle, uint32_t event, void *param);
 
 /*!
  * This function checks whether the endpoint is sending packet, then it primes
@@ -206,7 +206,7 @@ usb_status_t usb_device_cdc_event(void *handle, uint32_t event, void *param);
  * @param buffer The pointer to the buffer to be transferred.
  * @param length The length of the buffer to be transferred.
  */
-usb_status_t usb_device_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buffer, uint32_t length);
+usb_status_t usb_dev_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buffer, uint32_t length);
 
 /*!
  * This function checks whether the endpoint is receiving packet, then it primes
@@ -218,7 +218,7 @@ usb_status_t usb_device_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buf
  * @param buffer The pointer to the buffer to be transferred.
  * @param length The length of the buffer to be transferred.
  */
-usb_status_t usb_device_cdc_recv(class_handle_t handle, uint8_t ep, uint8_t *buffer, uint32_t length);
+usb_status_t usb_dev_cdc_recv(class_handle_t handle, uint8_t ep, uint8_t *buffer, uint32_t length);
 
 /*! @}*/
 

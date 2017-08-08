@@ -156,14 +156,14 @@ typedef struct
                                                        for the specified type of class*/
     class_handle_t              classHandle;      /*!< The class handle of the class, filled by the common driver.*/
     usb_device_class_struct_t   *classInfomation; /*!< Detailed information of the class*/
-} usb_device_class_config_struct_t;
+} usb_dev_class_config_t;
 
 /*!
  * Structure representing the device class configuration information.
  */
 typedef struct
 {
-    usb_device_class_config_struct_t *config;        /*!< Array of class configuration structures */
+    usb_dev_class_config_t *config;                  /*!< Array of class configuration structures */
     usb_device_callback_t            deviceCallback; /*!< Device callback function */
     uint8_t                          count;          /*!< Number of class supported */
 } usb_device_class_config_list_struct_t;
@@ -286,7 +286,7 @@ typedef union
 } usb_device_get_descriptor_common_union_t;
 
 typedef usb_status_t (*usb_device_class_init_call_t)(uint8_t controllerId,
-                                                     usb_device_class_config_struct_t
+                                                     usb_dev_class_config_t
                                                      *classConfig,
                                                      class_handle_t *
                                                      classHandle);
@@ -295,7 +295,7 @@ typedef usb_status_t (*usb_device_class_event_callback_t)(void *classHandle,
                                                           uint32_t event,
                                                           void *param);
 
-typedef struct _usb_device_class_map
+typedef struct
 {
     usb_device_class_init_call_t       init;
     usb_device_class_deinit_call_t     deinit;
@@ -329,7 +329,7 @@ extern "C" {
  *                           kinds of class handles. However, there is only one device handle. Therefore, the handle
  * points to
  *                           a device instead of a class. The class handle can be received from the
- *                           #usb_device_class_config_struct_t::classHandle after the the function successfully.
+ *                           #usb_dev_class_config_t::classHandle after the the function successfully.
  */
 usb_status_t usb_device_class_init(uint8_t controllerId,
                                    usb_device_class_config_list_struct_t *configList,
