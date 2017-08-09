@@ -46,8 +46,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __DEVICE_H__
-#define __DEVICE_H__
+#ifndef DEV_H
+#define DEV_H
 
 #include <stdint.h>
 #include <usb/usb.h>
@@ -384,4 +384,4 @@ usb_status_t usb_device_update_hw_tick(usb_device_handle handle, uint64_t tick);
 }
 #endif /* __cplusplus*/
 
-#endif /* __DEVICE_H__ */
+#endif /* DEV_H */
