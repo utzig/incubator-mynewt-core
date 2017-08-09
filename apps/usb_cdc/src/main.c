@@ -39,8 +39,8 @@
 #include <stdio.h>
 
 #include <usb/usb.h>
-#include <device/class.h>
-#include <device/device.h>
+#include <dev/class.h>
+#include <dev/dev.h>
 #include <cdc/cdc.h>
 
 //FIXME: required for USB_DATA_ALIGNMENT
@@ -373,7 +373,7 @@ static usb_device_class_struct_t g_UsbDeviceCdcVcomConfig = {
     USB_DEVICE_CONFIGURATION_COUNT,
 };
 
-static usb_device_class_config_struct_t cdc_config[] = {
+static usb_dev_class_config_t cdc_config[] = {
     {
         usb_device_cdc_cb,
         0,
@@ -520,6 +520,9 @@ uint8_t g_UsbDeviceConfigurationDescriptor[USB_DESCRIPTOR_LENGTH_CONFIGURATION_A
     0x00, /* The polling interval value is every 0 Frames */
 };
 
+/* FIXME: move string descriptors to cdc (or device?) and allow
+ * overwriting strings with syscfg
+ */
 uint8_t g_UsbDeviceString0[4] = {
     sizeof(g_UsbDeviceString0),
     USB_DESCRIPTOR_TYPE_STRING,
@@ -695,9 +698,9 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
     uint16_t *uartBitmap;
     usb_cdc_acm_info_t *acmInfo = &s_usbCdcAcmInfo;
     usb_device_cdc_acm_request_param_struct_t *acmReqParam;
-    usb_device_endpoint_callback_message_struct_t *epCbParam;
+    usb_dev_ep_cb_msg_t *epCbParam;
     acmReqParam = (usb_device_cdc_acm_request_param_struct_t *)param;
-    epCbParam = (usb_device_endpoint_callback_message_struct_t *)param;
+    epCbParam = (usb_dev_ep_cb_msg_t *)param;
 
     //printf("cdc event=%d\n", event);
     switch (event) {
@@ -707,13 +710,13 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
              ** meaning that we want to inform the host that we do not have any additional
              ** data, so it can flush the output.
              */
-            error = usb_device_cdc_send(handle, USB_CDC_VCOM_BULK_IN_ENDPOINT, NULL, 0);
+            error = usb_dev_cdc_send(handle, USB_CDC_VCOM_BULK_IN_ENDPOINT, NULL, 0);
         } else if (s_cdc_vcom.attach && s_cdc_vcom.startTransactions) {
             if (epCbParam->buffer || (!epCbParam->buffer && !epCbParam->length)) {
                 /* User: add your own code for send complete event */
                 /* Schedule buffer for next receive event */
-                error = usb_device_cdc_recv(handle, USB_CDC_VCOM_BULK_OUT_ENDPOINT, s_currRecvBuf,
-                                             g_UsbDeviceCdcVcomDicEndpoints[0].maxPacketSize);
+                error = usb_dev_cdc_recv(handle, USB_CDC_VCOM_BULK_OUT_ENDPOINT, s_currRecvBuf,
+                                         g_UsbDeviceCdcVcomDicEndpoints[0].maxPacketSize);
 #if defined(USB_DEVICE_CONFIG_KEEP_ALIVE_MODE)
                 s_waitForDataReceive = 1;
                 USB0->INTEN &= ~USB_INTEN_SOFTOKEN_MASK;
@@ -731,8 +734,8 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
 #endif
             if (!s_recvSize) {
                 /* Schedule buffer for next receive event */
-                error = usb_device_cdc_recv(handle, USB_CDC_VCOM_BULK_OUT_ENDPOINT, s_currRecvBuf,
-                                             g_UsbDeviceCdcVcomDicEndpoints[0].maxPacketSize);
+                error = usb_dev_cdc_recv(handle, USB_CDC_VCOM_BULK_OUT_ENDPOINT, s_currRecvBuf,
+                                         g_UsbDeviceCdcVcomDicEndpoints[0].maxPacketSize);
 #if  defined(USB_DEVICE_CONFIG_KEEP_ALIVE_MODE)
                 s_waitForDataReceive = 1;
                 USB0->INTEN &= ~USB_INTEN_SOFTOKEN_MASK;
@@ -829,7 +832,7 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
         *uartBitmap = acmInfo->uartState;
         len = (uint32_t)(NOTIF_PACKET_SIZE + UART_BITMAP_SIZE);
         if (!((usb_device_cdc_acm_struct_t *)handle)->hasSentState) {
-            error = usb_device_cdc_send(handle, USB_CDC_VCOM_INTERRUPT_IN_ENDPOINT, acmInfo->serialStateBuf, len);
+            error = usb_dev_cdc_send(handle, USB_CDC_VCOM_INTERRUPT_IN_ENDPOINT, acmInfo->serialStateBuf, len);
             if (error != kStatus_USB_Success) {
                 //FIXME
                 //usb_echo("kUSB_DeviceCdcEventSetControlLineState error!");
@@ -891,7 +894,7 @@ usb_device_cb(usb_device_handle handle, uint32_t event, void *param)
             s_cdc_vcom.attach = 1;
             s_cdc_vcom.currentConfiguration = *((uint8_t *)param);
             if (*((uint8_t *)param) == USB_CDC_VCOM_CONFIGURE_INDEX) {
-                usb_device_cdc_recv(s_cdc_vcom.cdcAcmHandle,
+                usb_dev_cdc_recv(s_cdc_vcom.cdcAcmHandle,
                         USB_CDC_VCOM_BULK_OUT_ENDPOINT, s_currRecvBuf,
                         g_UsbDeviceCdcVcomDicEndpoints[0].maxPacketSize);
             }
@@ -981,7 +984,7 @@ usb_app_task_handler(void *arg)
                 uint32_t size = s_sendSize;
                 s_sendSize = 0;
 
-                error = usb_device_cdc_send(s_cdc_vcom.cdcAcmHandle,
+                error = usb_dev_cdc_send(s_cdc_vcom.cdcAcmHandle,
                         USB_CDC_VCOM_BULK_IN_ENDPOINT, s_currSendBuf, size);
                 if (error != kStatus_USB_Success)
                 {
@@ -1030,26 +1033,11 @@ usb_dev_task_handler(void *handle)
 static void
 blinker_handler(void *arg)
 {
-    struct os_task *t;
-    //int prev_pin_state, curr_pin_state;
-    int led_pin;
-
-    led_pin = LED_BLINK_PIN;
-    hal_gpio_init_out(led_pin, 1);
+    hal_gpio_init_out(LED_BLINK_PIN, 1);
 
     while (1) {
-        t = os_sched_get_current_task();
-        assert(t->t_func == blinker_handler);
-
-        /* Wait one second */
-        os_time_delay(OS_TICKS_PER_SEC*3);
-
-        //prev_pin_state = hal_gpio_read(led_pin);
-        //curr_pin_state = hal_gpio_toggle(led_pin);
-        hal_gpio_toggle(led_pin);
-        //LOG_INFO(&my_log, LOG_MODULE_DEFAULT, "GPIO toggle from %u to %u",
-        //    prev_pin_state, curr_pin_state);
-        //STATS_INC(g_stats_gpio_toggle, toggles);
+        os_time_delay(OS_TICKS_PER_SEC * 3);
+        hal_gpio_toggle(LED_BLINK_PIN);
     }
 }
 

@@ -48,9 +48,9 @@
 
 #include <usb/usb.h>
 
-#include <device/device.h>
-#include <device/class.h>
-#include <device/ch9.h>
+#include <dev/dev.h>
+#include <dev/class.h>
+#include <dev/ch9.h>
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_NUM)
 

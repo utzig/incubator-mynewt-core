@@ -27,8 +27,8 @@ pkg.keywords:
 pkg.deps:
     - kernel/os
     - hw/usb
-    - hw/usb/device
-    - hw/usb/device/class/cdc
+    - hw/usb/dev
+    - hw/usb/dev/class/cdc
     - sys/console/minimal
     - sys/log/stub
     - sys/stats/stub

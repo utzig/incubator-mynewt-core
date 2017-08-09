@@ -47,7 +47,7 @@
  */
 
 #include <usb/usb.h>
-#include <device/device.h>
+#include <dev/dev.h>
 #include <hal_usb/hal_usb.h>
 
 #include <syscfg/syscfg.h>

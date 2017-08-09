@@ -50,8 +50,8 @@
 #include <stdlib.h>
 
 #include <usb/usb.h>
-#include <dev/dev.h>
-#include <dev/class.h>
+#include <device/device.h>
+#include <device/class.h>
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_CDC_ACM)
 #include <cdc/cdc.h>

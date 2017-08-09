@@ -49,7 +49,7 @@
 #ifndef __USB_DEVICE_CLASS_H__
 #define __USB_DEVICE_CLASS_H__
 
-#include "device.h"
+#include "dev.h"
 
 /*!
  * @addtogroup usb_device_class_driver

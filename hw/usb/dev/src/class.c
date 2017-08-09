@@ -48,9 +48,9 @@
 
 #include <os/os.h>
 #include <usb/usb.h>
-#include <device/device.h>
-#include <device/ch9.h>
-#include <device/class.h>
+#include <dev/dev.h>
+#include <dev/ch9.h>
+#include <dev/class.h>
 
 #include <hal_usb/hal_usb.h>
 
