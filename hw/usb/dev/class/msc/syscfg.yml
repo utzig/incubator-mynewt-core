@@ -16,7 +16,7 @@
 # under the License.
 #
 
-# Package: hw/usb/device/class/msc
+# Package: hw/usb/dev/class/msc
 
 syscfg.defs:
     USB_DEVICE_CONFIG_MSC:

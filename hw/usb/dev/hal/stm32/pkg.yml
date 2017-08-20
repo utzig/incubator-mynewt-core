@@ -17,11 +17,11 @@
 # under the License.
 #
 
-pkg.name: hw/usb/device/hal/stm32
+pkg.name: hw/usb/dev/hal/stm32
 pkg.description: USB low-level STM32 driver
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
 pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps:
-    - hw/usb/device
+    - hw/usb/dev

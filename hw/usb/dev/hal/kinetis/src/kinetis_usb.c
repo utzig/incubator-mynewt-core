@@ -127,13 +127,12 @@ _BDT_GET_CONTROL(uint32_t base, uint32_t ep, uint32_t dir, uint32_t odd)
 }
 
 static void
-_init_cb_message_with_code(usb_device_callback_message_struct_t *message,
-                           usb_device_notification_t code)
+_init_cb_msg_with_code(usb_dev_cb_msg_t *msg, usb_device_notification_t code)
 {
-    message->buffer = NULL;
-    message->code = code;
-    message->length = 0;
-    message->isSetup = 0;
+    msg->buf = NULL;
+    msg->len = 0;
+    msg->code = code;
+    msg->isSetup = 0;
 }
 
 /*
@@ -388,7 +387,7 @@ _kinetis_usb_dev_tokdone(kinetis_usb_dev_state_t *state)
     uint32_t length;
     uint32_t remainingLength;
     uint8_t *bdtBuffer;
-    usb_device_callback_message_struct_t message;
+    usb_dev_cb_msg_t msg;
     uint8_t endpoint;
     uint8_t direction;
     uint8_t bdtOdd;
@@ -442,8 +441,8 @@ _kinetis_usb_dev_tokdone(kinetis_usb_dev_state_t *state)
         if (!remainingLength ||
             (state->endpointState[index].stateUnion.stateBitField.
              maxPacketSize > length)) {
-            message.length = state->endpointState[index].transferDone;
-            message.buffer = state->endpointState[index].transferBuffer;
+            msg.len = state->endpointState[index].transferDone;
+            msg.buf = state->endpointState[index].transferBuffer;
             state->endpointState[index].stateUnion.stateBitField.
             transferring = 0;
 
@@ -489,8 +488,8 @@ _kinetis_usb_dev_tokdone(kinetis_usb_dev_state_t *state)
         }
     } else {
         if (endpoint == USB_CONTROL_ENDPOINT && !length) {
-            message.length = 0;
-            message.buffer = (uint8_t *)NULL;
+            msg.len = 0;
+            msg.buf = (uint8_t *)NULL;
         } else {
             if (!state->endpointState[index].stateUnion.stateBitField.dmaAlign) {
                 uint8_t *buffer = (uint8_t *)USB_LONG_FROM_LITTLE_ENDIAN(
@@ -528,12 +527,11 @@ _kinetis_usb_dev_tokdone(kinetis_usb_dev_state_t *state)
                 !remainingLength ||
                 (state->endpointState[index].stateUnion.stateBitField.
                  maxPacketSize > length)) {
-                message.length = state->endpointState[index].transferDone;
+                msg.len = state->endpointState[index].transferDone;
                 if (isSetup) {
-                    message.buffer = bdtBuffer;
+                    msg.buf = bdtBuffer;
                 } else {
-                    message.buffer =
-                        state->endpointState[index].transferBuffer;
+                    msg.buf = state->endpointState[index].transferBuffer;
                 }
                 state->endpointState[index].stateUnion.stateBitField.
                 transferring = 0;
@@ -546,10 +544,10 @@ _kinetis_usb_dev_tokdone(kinetis_usb_dev_state_t *state)
         }
     }
 
-    message.isSetup = isSetup;
-    message.code = endpoint | (uint8_t)(((uint32_t)direction << 0x07));
+    msg.isSetup = isSetup;
+    msg.code = endpoint | (uint8_t)(((uint32_t)direction << 0x07));
 
-    usb_dev_notify(state->dev, &message);
+    usb_dev_notify(state->dev, &msg);
 
     state->registers->CTL &= ~USB_CTL_TXSUSPENDTOKENBUSY_MASK;
 }
@@ -557,7 +555,7 @@ _kinetis_usb_dev_tokdone(kinetis_usb_dev_state_t *state)
 static void
 _kinetis_usb_dev_reset(kinetis_usb_dev_state_t *state)
 {
-    usb_device_callback_message_struct_t message;
+    usb_dev_cb_msg_t msg;
     volatile USB_Type *regs = state->registers;
 
     state->isResetting = 1;
@@ -568,8 +566,8 @@ _kinetis_usb_dev_reset(kinetis_usb_dev_state_t *state)
     regs->USBCTRL &= ~USB_USBCTRL_SUSP_MASK;
 #endif
 
-    _init_cb_message_with_code(&message, kUSB_DeviceNotifyBusReset);
-    usb_dev_notify(state->dev, &message);
+    _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyBusReset);
+    usb_dev_notify(state->dev, &msg);
 }
 
 /* The USB suspend and resume signals need to be detected and handled when the
@@ -579,7 +577,7 @@ _kinetis_usb_dev_reset(kinetis_usb_dev_state_t *state)
 static void
 _kinetis_usb_dev_sleep(kinetis_usb_dev_state_t *state)
 {
-    usb_device_callback_message_struct_t message;
+    usb_dev_cb_msg_t msg;
     volatile USB_Type *regs = state->registers;
 
     regs->INTEN |= USBx_ISTAT_RESUME;
@@ -591,14 +589,14 @@ _kinetis_usb_dev_sleep(kinetis_usb_dev_state_t *state)
     regs->ISTAT = USBx_ISTAT_SLEEP;
     regs->ISTAT = USBx_ISTAT_RESUME;
 
-    _init_cb_message_with_code(&message, kUSB_DeviceNotifySuspend);
-    usb_dev_notify(state->deviceHandle, &message);
+    _init_cb_msg_with_code(&msg, kUSB_DeviceNotifySuspend);
+    usb_dev_notify(state->deviceHandle, &msg);
 }
 
 static void
 _kinetis_usb_dev_resume(kinetis_usb_dev_state_t *state)
 {
-    usb_device_callback_message_struct_t message;
+    usb_dev_cb_msg_t msg;
     volatile USB_Type *regs = state->registers;
 
     regs->USBCTRL &= ~USB_USBCTRL_SUSP_MASK;
@@ -609,8 +607,8 @@ _kinetis_usb_dev_resume(kinetis_usb_dev_state_t *state)
     regs->ISTAT = USBx_ISTAT_RESUME;
     regs->ISTAT = USBx_ISTAT_SLEEP;
 
-    _init_cb_message_with_code(&message, kUSB_DeviceNotifyResume);
-    usb_dev_notify(state->deviceHandle, &message);
+    _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyResume);
+    usb_dev_notify(state->deviceHandle, &msg);
 }
 #endif /* USB_KINETIS_LOW_POWER_MODE */
 
@@ -619,26 +617,26 @@ _kinetis_usb_dev_resume(kinetis_usb_dev_state_t *state)
 static void
 _kinetis_usb_dev_vbus_rising(kinetis_usb_dev_state_t *state)
 {
-    usb_device_callback_message_struct_t message;
+    usb_dev_cb_msg_t msg;
     volatile USB_Type *regs = state->regs;
 
     regs->MISCCTRL &= ~USB_MISCCTRL_VREDG_EN_MASK;
     regs->MISCCTRL |= USB_MISCCTRL_VREDG_EN_MASK;
 
-    _init_cb_message_with_code(&message, kUSB_DeviceNotifyAttach);
-    usb_dev_notify(state->deviceHandle, &message);
+    _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyAttach);
+    usb_dev_notify(state->deviceHandle, &msg);
 }
 
 static void
 _kinetis_usb_dev_vbus_falling(kinetis_usb_dev_state_t *state)
 {
-    usb_device_callback_message_struct_t message;
+    usb_dev_cb_msg_t msg;
 
     state->registers->MISCCTRL &= ~USB_MISCCTRL_VFEDG_EN_MASK;
     state->registers->MISCCTRL |= USB_MISCCTRL_VFEDG_EN_MASK;
 
-    _init_cb_message_with_code(&message, kUSB_DeviceNotifyDetach);
-    usb_dev_notify(state->deviceHandle, &message);
+    _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyDetach);
+    usb_dev_notify(state->deviceHandle, &msg);
 }
 #endif /* USB_DEVICE_CONFIG_DETACH_ENABLE || FSL_FEATURE_USB_KHCI_VBUS_DETECT_ENABLED */
 
@@ -674,19 +672,25 @@ _kinetis_usb_dev_stall(kinetis_usb_dev_state_t *state)
 static void
 _kinetis_usb_dev_error(kinetis_usb_dev_state_t *state)
 {
-    usb_device_callback_message_struct_t message;
+    usb_dev_cb_msg_t msg;
 
     state->registers->ISTAT = USBx_ISTAT_ERROR;
 
-    _init_cb_message_with_code(&message, kUSB_DeviceNotifyError);
-    usb_dev_notify(state->deviceHandle, &message);
+    _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyError);
+    usb_dev_notify(state->deviceHandle, &msg);
 }
 #endif
 
+/*
+ * @param controllerId An ID to identify the USB dev supporting multiple
+ *                     peripherals.
+ * @param handle       TODO
+ * @param ctrl_handle  The controller handle is provided back to caller.
+ */
 static usb_status_t
 _kinetis_usb_init(uint8_t controllerId,
                   usb_device_handle handle,
-                  usb_device_controller_handle *khandle)
+                  usb_device_controller_handle *ctrl_handle)
 {
     kinetis_usb_dev_state_t *state;
     volatile USB_Type *regs;
@@ -733,7 +737,7 @@ _kinetis_usb_init(uint8_t controllerId,
 
     _kinetis_usb_dev_set_dflt(state);
 
-    *khandle = state;
+    *ctrl_handle = state;
     state->dev = (usb_dev_t *)handle;
 
     return 0;
@@ -879,18 +883,18 @@ static usb_status_t
 _kinetis_usb_cancel(usb_device_controller_handle handle, uint8_t ep)
 {
     kinetis_usb_dev_state_t *state = (kinetis_usb_dev_state_t *)handle;
-    usb_device_callback_message_struct_t message;
+    usb_dev_cb_msg_t msg;
     //FIXME: should not be USB_EP_DIR???
     uint8_t index = (USB_EP_NUMBER(ep) << 1) | USB_EP_DIR(ep);
 
     /* Cancel the transfer and notify the up layer when the endpoint is busy. */
     if (state->endpointState[index].stateUnion.stateBitField.transferring) {
-        message.length = USB_UNINITIALIZED_VAL_32;
-        message.buffer = state->endpointState[index].transferBuffer;
-        message.code = ep;
-        message.isSetup = 0;
+        msg.len = USB_UNINITIALIZED_VAL_32;
+        msg.buf = state->endpointState[index].transferBuffer;
+        msg.code = ep;
+        msg.isSetup = 0;
         state->endpointState[index].stateUnion.stateBitField.transferring = 0;
-        usb_dev_notify(state->dev, &message);
+        usb_dev_notify(state->dev, &msg);
     }
     return kStatus_USB_Success;
 }
@@ -1162,8 +1166,7 @@ static const usb_device_controller_interface_struct_t kinetis_interface = {
 };
 
 usb_status_t
-USB_DeviceErrorNotification(usb_dev_t *dev,
-                            usb_device_callback_message_struct_t *message)
+USB_DeviceErrorNotification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 {
     return dev->devcb(dev, kUSB_DeviceEventError, NULL);
 }

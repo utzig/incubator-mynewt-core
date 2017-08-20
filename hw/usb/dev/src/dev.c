@@ -57,12 +57,12 @@
 static usb_dev_t s_UsbDevice[MYNEWT_VAL(USB_DEVICE_CONFIG_NUM)];
 static struct os_eventq notification_queue;
 static struct os_event ev;
-static usb_device_callback_message_struct_t message;
+static usb_dev_cb_msg_t message;
 
 //FIXME
 //static int mhead = 0;
 //static int mtail = 0;
-//static usb_device_callback_message_struct_t messages[16];
+//static usb_dev_cb_msg_t messages[16];
 
 /*!
  * This function allocates a device handle.
@@ -226,8 +226,7 @@ _usb_device_control(usb_device_handle handle, usb_device_control_type_t type, vo
  * @retval kStatus_USB_Success              Get a device handle successfully.
  */
 static usb_status_t
-_usb_device_reset_notification(usb_dev_t *dev,
-                               usb_device_callback_message_struct_t *message)
+_usb_device_reset_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 {
     int i;
 
@@ -257,15 +256,13 @@ _usb_device_reset_notification(usb_dev_t *dev,
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_LOW_POWER_MODE)
 static usb_status_t
-_usb_device_suspend_notification(usb_dev_t *dev,
-                                 usb_device_callback_message_struct_t *message)
+_usb_device_suspend_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 {
     return dev->devcb(handle, kUSB_DeviceEventSuspend, NULL);
 }
 
 static usb_status_t
-_usb_device_resume_notification(usb_dev_t *dev,
-                                usb_device_callback_message_struct_t *message)
+_usb_device_resume_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 {
     return dev->devcb(handle, kUSB_DeviceEventResume, NULL);
 }
@@ -273,40 +270,37 @@ _usb_device_resume_notification(usb_dev_t *dev,
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_DETACH_ENABLE)
 static usb_status_t
-_usb_device_detach_notification(usb_dev_t *dev,
-                                usb_device_callback_message_struct_t *message)
+_usb_device_detach_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 {
     return dev->devcb(handle, kUSB_DeviceEventDetach, NULL);
 }
 
 static usb_status_t
-_usb_device_attach_notification(usb_dev_t *dev,
-                                usb_device_callback_message_struct_t *message)
+_usb_device_attach_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 {
     return dev->devcb(handle, kUSB_DeviceEventAttach, NULL);
 }
 #endif
 
 static usb_status_t
-_usb_device_notification(usb_dev_t *dev,
-                         usb_device_callback_message_struct_t *message)
+_usb_device_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 {
-    uint8_t endpoint = USB_EP_NUMBER(message->code);
-    uint8_t direction = USB_EP_DIR(message->code);
+    uint8_t endpoint = USB_EP_NUMBER(msg->code);
+    uint8_t direction = USB_EP_DIR(msg->code);
     usb_status_t error = kStatus_USB_Error;
     uint8_t epidx;
     usb_dev_ep_cb_msg_t ep_cb_msg;
 
-    switch (message->code) {
+    switch (msg->code) {
     case kUSB_DeviceNotifyBusReset:
-        error = _usb_device_reset_notification(dev, message);
+        error = _usb_device_reset_notification(dev, msg);
         break;
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_LOW_POWER_MODE)
     case kUSB_DeviceNotifySuspend:
-        error = _usb_device_suspend_notification(dev, message);
+        error = _usb_device_suspend_notification(dev, msg);
         break;
     case kUSB_DeviceNotifyResume:
-        error = _usb_device_resume_notification(dev, message);
+        error = _usb_device_resume_notification(dev, msg);
         break;
 #endif
 
@@ -316,16 +310,16 @@ _usb_device_notification(usb_dev_t *dev,
         (defined(USB_DEVICE_CONFIG_EHCI_ERROR_HANDLING) && \
         USB_DEVICE_CONFIG_EHCI_ERROR_HANDLING)
     case kUSB_DeviceNotifyError:
-        error = USB_DeviceErrorNotification(dev, message);
+        error = USB_DeviceErrorNotification(dev, msg);
         break;
 #endif
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_DETACH_ENABLE)
     case kUSB_DeviceNotifyDetach:
-        error = _usb_device_detach_notification(dev, message);
+        error = _usb_device_detach_notification(dev, msg);
         break;
     case kUSB_DeviceNotifyAttach:
-        error = _usb_device_attach_notification(dev, message);
+        error = _usb_device_attach_notification(dev, msg);
         break;
 #endif
 
@@ -333,10 +327,10 @@ _usb_device_notification(usb_dev_t *dev,
         if (endpoint < MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS)) {
             epidx = (uint8_t)((uint32_t)endpoint<< 1) | direction;
             if (dev->epcbs[epidx].callbackFn) {
-                ep_cb_msg.buffer = message->buffer;
-                ep_cb_msg.length = message->length;
-                ep_cb_msg.isSetup = message->isSetup;
-                if (message->isSetup) {
+                ep_cb_msg.buffer = msg->buf;
+                ep_cb_msg.length = msg->len;
+                ep_cb_msg.isSetup = msg->isSetup;
+                if (msg->isSetup) {
                     dev->epcbs[0].isBusy = 0;
                     dev->epcbs[1].isBusy = 0;
                 } else {
@@ -364,9 +358,9 @@ usb_status_t
 usb_dev_notify(void *handle, void *msg)
 {
     usb_dev_t *dev = (usb_dev_t *) handle;
-    //usb_device_callback_message_struct_t *message = (usb_device_callback_message_struct_t *)msg;
+    //usb_dev_cb_msg_t *message = (usb_dev_cb_msg_t *)msg;
 
-    memcpy(&message, (usb_device_callback_message_struct_t *) msg, sizeof message);
+    memcpy(&message, (usb_dev_cb_msg_t *) msg, sizeof message);
 
     if (!msg || !handle) {
         return kStatus_USB_InvalidHandle;

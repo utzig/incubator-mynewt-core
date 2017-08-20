@@ -297,7 +297,7 @@ usb_dev_cdc_endpoints_init(usb_device_cdc_acm_struct_t *cdc)
  * @return A USB error code or kStatus_USB_Success.
  */
 static usb_status_t
-usb_dev_cdc_endpoints_deinit(usb_device_cdc_acm_struct_t *handle)
+usb_dev_cdc_eps_deinit(usb_device_cdc_acm_struct_t *handle)
 {
     usb_status_t err = kStatus_USB_Error;
     int i;
@@ -352,7 +352,7 @@ usb_dev_cdc_event(void *handle, uint32_t event, void *param)
             break;
         }
 
-        err = usb_dev_cdc_endpoints_deinit(cdcAcmHandle);
+        err = usb_dev_cdc_eps_deinit(cdcAcmHandle);
         cdcAcmHandle->configuration = *temp8;
         cdcAcmHandle->alternate = 0;
         err = usb_dev_cdc_endpoints_init(cdcAcmHandle);
@@ -375,7 +375,7 @@ usb_dev_cdc_event(void *handle, uint32_t event, void *param)
         if (alternate == cdcAcmHandle->alternate) {
             break;
         }
-        err = usb_dev_cdc_endpoints_deinit(cdcAcmHandle);
+        err = usb_dev_cdc_eps_deinit(cdcAcmHandle);
         cdcAcmHandle->alternate = alternate;
         err = usb_dev_cdc_endpoints_init(cdcAcmHandle);
         if (kStatus_USB_Success != err) {
@@ -578,7 +578,7 @@ usb_dev_cdc_deinit(class_handle_t handle)
     }
 #endif
 
-    err = usb_dev_cdc_endpoints_deinit(cdc);
+    err = usb_dev_cdc_eps_deinit(cdc);
     usb_dev_cdc_free_handle(cdc);
     return err;
 }

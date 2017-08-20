@@ -164,7 +164,7 @@ typedef struct _usb_device_endpoint_status_struct
 
 #define usb_device_controller_handle usb_device_handle
 
-typedef enum _usb_device_notification
+typedef enum
 {
     kUSB_DeviceNotifyBusReset = 0x10,  /*!< Reset signal detected */
     kUSB_DeviceNotifySuspend,          /*!< Suspend signal detected */
@@ -174,13 +174,13 @@ typedef enum _usb_device_notification
     kUSB_DeviceNotifyAttach,           /*!< Device connected to a host */
 } usb_device_notification_t;
 
-typedef struct _usb_device_callback_message_struct
+typedef struct
 {
-    uint8_t  *buffer; /*!< Transferred buffer */
-    uint32_t length; /*!< Transferred data length */
-    uint8_t  code;   /*!< Notification code */
-    uint8_t  isSetup; /*!< Is in a setup phase */
-} usb_device_callback_message_struct_t;
+    uint8_t   *buf;
+    uint32_t  len;
+    uint8_t   code;
+    uint8_t   isSetup;
+} usb_dev_cb_msg_t;
 
 /*
  * Device controller interface call table functions

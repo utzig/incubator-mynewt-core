@@ -43,4 +43,4 @@ pkg.deps.ETH_0:
     - hw/drivers/lwip/stm32_eth
 
 pkg.deps.USB_DEV:
-    - hw/usb/device/hal/stm32
+    - hw/usb/dev/hal/stm32

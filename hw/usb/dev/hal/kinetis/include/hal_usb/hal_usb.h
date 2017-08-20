@@ -92,6 +92,10 @@ typedef struct
 typedef struct
 {
     usb_dev_t           *dev;
+    uint8_t             isResetting;
+    uint8_t             controllerId;
+
+    /* device specific */
     uint8_t             *bdt;
     volatile USB_Type   *registers;
     uint8_t             setupPacketBuffer[USB_SETUP_PACKET_SIZE * 2]; /*!< The setup request buffer */
@@ -108,8 +112,6 @@ typedef struct
                                           */
     kinetis_usb_dev_ep_state_t endpointState[MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) * 2];
     uint8_t isDmaAlignBufferInusing;
-    uint8_t isResetting;
-    uint8_t controllerId;
     uint8_t setupBufferIndex;
 #if defined(USB_DEVICE_CONFIG_OTG)
     uint8_t otgStatus;

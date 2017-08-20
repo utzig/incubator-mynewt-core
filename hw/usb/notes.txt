@@ -1,3 +1,8 @@
 For lpc1135:
 
 #define USB_DATA_ALIGNMENT USB_RAM_ADDRESS_ALIGNMENT(64)
+
+- TODO: currently class registers every configured class as configured. This
+  doesn't allow new customized classes. classes should register themselves.
+  A new registration method needs to be added and the registration needs to
+  happen by an auto entry point in the given class.
