@@ -203,7 +203,7 @@ typedef struct
 typedef struct _usb_device_msc_struct
 {
     usb_device_handle handle;                              /*!< The device handle */
-    usb_device_class_config_struct_t *configurationStruct; /*!< The configuration of the class*/
+    usb_dev_class_config_t *configurationStruct; /*!< The configuration of the class*/
     usb_device_interface_struct_t *interfaceHandle;        /*!< Current interface handle */
     uint32_t transferRemaining;                            /*!< Transfer remaining data */
     uint32_t currentOffset;                                /*!< Current address offset */
@@ -244,37 +244,14 @@ typedef struct _usb_device_msc_struct
     uint8_t interfaceNumber;   /*!< The interface number of the class */
 } usb_dev_msc_t;
 
-/*!
-* @brief Initializes the MSC class.
-*
-* This function is used to initialize the MSC class.
-*
-* @param controllerId   The controller ID of the USB IP. See the enumeration usb_controller_index_t.
-* @param config          The class configuration information.
-* @param handle          A parameter used to return pointer of the MSC class handle to the caller.
-*
-* @return A USB error code or kStatus_USB_Success.
-*/
-usb_status_t USB_DeviceMscInit(uint8_t controllerId,
-                               usb_device_class_config_struct_t *config,
-                               class_handle_t *handle);
-/*!
- * @brief Deinitializes the device MSC class.
- *
- * The function deinitializes the device MSC class.
- *
- * @param handle The MSC class handle received from usb_device_class_config_struct_t::classHandle.
- *
- * @return A USB error code or kStatus_USB_Success.
- */
-usb_status_t USB_DeviceMscDeinit(class_handle_t handle);
-
-/*! @}*/
-
-usb_status_t USB_DeviceMscEvent(void *handle, uint32_t event, void *param);
-usb_status_t USB_DeviceMscLbaTransfer(usb_dev_msc_t *mscHandle,
-                                             uint8_t direction,
-                                             usb_lba_transfer_information_struct_t *lba_info_ptr);
+usb_status_t usb_dev_msc_init(uint8_t controllerId,
+                              usb_dev_class_config_t *config,
+                              class_handle_t *handle);
+usb_status_t usb_dev_msc_deinit(class_handle_t handle);
+usb_status_t usb_dev_msc_event(void *handle, uint32_t event, void *param);
+//usb_status_t USB_DeviceMscLbaTransfer(usb_dev_msc_t *mscHandle,
+//                                             uint8_t direction,
+//                                             usb_lba_transfer_information_struct_t *lba_info_ptr);
 
 #ifdef __cplusplus
 extern "C" {
@@ -296,10 +273,9 @@ extern usb_status_t USB_DeviceMscUfiPreventAllowMediumCommand(usb_dev_msc_t *msc
 extern usb_status_t USB_DeviceMscUfiSendDiagnosticCommand(usb_dev_msc_t *mscHandle);
 extern usb_status_t USB_DeviceMscUfiStartStopUnitCommand(usb_dev_msc_t *mscHandle);
 extern usb_status_t USB_DeviceMscUfiUnsupportCommand(usb_dev_msc_t *mscHandle);
+
 #ifdef __cplusplus
 }
 #endif
-
-/*! @}*/
 
 #endif
