@@ -67,7 +67,7 @@
 #define USB_MAKE_VERSION(major, minor, bugfix) \
     (((major) << 16) | ((minor) << 8) | (bugfix))
 
-typedef enum _usb_status
+typedef enum
 {
     kStatus_USB_Success = 0x00,             /*!< Success */
     kStatus_USB_Error,                      /*!< Failed */

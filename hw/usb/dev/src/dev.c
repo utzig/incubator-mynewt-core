@@ -496,29 +496,6 @@ usb_device_deinit(usb_device_handle handle)
     return kStatus_USB_Success;
 }
 
-/*!
- * @brief Send data through a specified endpoint.
- *
- * The function is used to send data through a specified endpoint.
- *
- * @param endpointAddress Endpoint index.
- * @param buffer The memory address to hold the data need to be sent.
- * @param length The data length need to be sent.
- *
- * @retval kStatus_USB_Success              The send request is sent successfully.
- * @retval kStatus_USB_InvalidHandle        The handle is a NULL pointer. Or the controller handle is invalid.
- * @retval kStatus_USB_Busy                 Cannot allocate dtds for current tansfer in EHCI driver.
- * @retval kStatus_USB_ControllerNotFound   Cannot find the controller.
- * @retval kStatus_USB_Error                The device is doing reset.
- *
- * @note The return value just means if the sending request is successful or not; the transfer done is notified by the
- * corresponding callback function.
- * Currently, only one transfer request can be supported for one specific endpoint.
- * If there is a specific requirement to support multiple transfer requests for one specific endpoint, the application
- * should implement a queue in the application level.
- * The subsequent transfer could begin only when the previous transfer is done (get notification through the endpoint
- * callback).
- */
 usb_status_t
 usb_device_send_req(usb_device_handle handle, uint8_t endpointAddress,
                     uint8_t *buffer, uint32_t length)
@@ -528,29 +505,6 @@ usb_device_send_req(usb_device_handle handle, uint8_t endpointAddress,
         buffer, length);
 }
 
-/*!
- * @brief Receive data through a specified endpoint.
- *
- * The function is used to receive data through a specified endpoint.
- *
- * @param endpointAddress Endpoint index.
- * @param buffer The memory address to save the received data.
- * @param length The data length want to be received.
- *
- * @retval kStatus_USB_Success              The receive request is sent successfully.
- * @retval kStatus_USB_InvalidHandle        The handle is a NULL pointer. Or the controller handle is invalid.
- * @retval kStatus_USB_Busy                 Cannot allocate dtds for current tansfer in EHCI driver.
- * @retval kStatus_USB_ControllerNotFound   Cannot find the controller.
- * @retval kStatus_USB_Error                The device is doing reset.
- *
- * @note The return value just means if the receiving request is successful or not; the transfer done is notified by the
- * corresponding callback function.
- * Currently, only one transfer request can be supported for one specific endpoint.
- * If there is a specific requirement to support multiple transfer requests for one specific endpoint, the application
- * should implement a queue in the application level.
- * The subsequent transfer could begin only when the previous transfer is done (get notification through the endpoint
- * callback).
- */
 usb_status_t
 usb_device_recv_req(usb_device_handle handle, uint8_t endpointAddress,
                     uint8_t *buffer, uint32_t length)
@@ -722,11 +676,6 @@ usb_dev_get_status(usb_device_handle handle, usb_device_status_t type, void *par
  *
  * @param type The selected item. Please refer to the structure usb_device_status_t.
  * @param param The param type is determined by the selected item.
- *
- * @retval kStatus_USB_Success              Set status successfully.
- * @retval kStatus_USB_InvalidHandle        The handle is a NULL pointer. Or the controller handle is invalid.
- * @retval kStatus_USB_ControllerNotFound   Cannot find the controller.
- * @retval kStatus_USB_Error                Unsupported type, or the param is NULL pointer.
  */
 usb_status_t
 usb_dev_set_status(usb_device_handle handle, usb_device_status_t type, void *param)
@@ -802,14 +751,6 @@ usb_device_task_fn(void *deviceHandle)
     }
 }
 
-/*!
- * @brief Get dvice stack version function.
- *
- * The function is used to get dvice stack version.
- *
- * @param[out] version The version structure pointer to keep the device stack version.
- *
- */
 void
 usb_device_get_version(uint32_t *version)
 {

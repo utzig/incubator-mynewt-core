@@ -50,6 +50,73 @@
 
 #include <os/os.h>
 
+#define CDC_COMM_CLASS                                    0x02
+#define CDC_DATA_CLASS                                    0x0A
+
+#define USB_CDC_DIRECT_LINE_CONTROL_MODEL                 0x01
+#define USB_CDC_ABSTRACT_CONTROL_MODEL                    0x02
+#define USB_CDC_TELEPHONE_CONTROL_MODEL                   0x03
+#define USB_CDC_MULTI_CHANNEL_CONTROL_MODEL               0x04
+#define USB_CDC_CAPI_CONTROL_MOPDEL                       0x05
+#define USB_CDC_ETHERNET_NETWORKING_CONTROL_MODEL         0x06
+#define USB_CDC_ATM_NETWORKING_CONTROL_MODEL              0x07
+#define USB_CDC_WIRELESS_HANDSET_CONTROL_MODEL            0x08
+#define USB_CDC_DEVICE_MANAGEMENT                         0x09
+#define USB_CDC_MOBILE_DIRECT_LINE_MODEL                  0x0A
+#define USB_CDC_OBEX                                      0x0B
+#define USB_CDC_ETHERNET_EMULATION_MODEL                  0x0C
+
+#define USB_CDC_NO_CLASS_SPECIFIC_PROTOCOL                0x00
+#define USB_CDC_AT_250_PROTOCOL                           0x01
+#define USB_CDC_AT_PCCA_101_PROTOCOL                      0x02
+#define USB_CDC_AT_PCCA_101_ANNEX_O                       0x03
+#define USB_CDC_AT_GSM_7_07                               0x04
+#define USB_CDC_AT_3GPP_27_007                            0x05
+#define USB_CDC_AT_TIA_CDMA                               0x06
+#define USB_CDC_ETHERNET_EMULATION_PROTOCOL               0x07
+#define USB_CDC_EXTERNAL_PROTOCOL                         0xFE
+#define USB_CDC_VENDOR_SPECIFIC                           0xFF
+
+#define USB_CDC_PYHSICAL_INTERFACE_PROTOCOL               0x30
+#define USB_CDC_HDLC_PROTOCOL                             0x31
+#define USB_CDC_TRANSPARENT_PROTOCOL                      0x32
+#define USB_CDC_MANAGEMENT_PROTOCOL                       0x50
+#define USB_CDC_DATA_LINK_Q931_PROTOCOL                   0x51
+#define USB_CDC_DATA_LINK_Q921_PROTOCOL                   0x52
+#define USB_CDC_DATA_COMPRESSION_V42BIS                   0x90
+#define USB_CDC_EURO_ISDN_PROTOCOL                        0x91
+#define USB_CDC_RATE_ADAPTION_ISDN_V24                    0x92
+#define USB_CDC_CAPI_COMMANDS                             0x93
+#define USB_CDC_HOST_BASED_DRIVER                         0xFD
+#define USB_CDC_UNIT_FUNCTIONAL                           0xFE
+
+#define USB_CDC_HEADER_FUNC_DESC                          0x00
+#define USB_CDC_CALL_MANAGEMENT_FUNC_DESC                 0x01
+#define USB_CDC_ABSTRACT_CONTROL_FUNC_DESC                0x02
+#define USB_CDC_DIRECT_LINE_FUNC_DESC                     0x03
+#define USB_CDC_TELEPHONE_RINGER_FUNC_DESC                0x04
+#define USB_CDC_TELEPHONE_REPORT_FUNC_DESC                0x05
+#define USB_CDC_UNION_FUNC_DESC                           0x06
+#define USB_CDC_COUNTRY_SELECT_FUNC_DESC                  0x07
+#define USB_CDC_TELEPHONE_MODES_FUNC_DESC                 0x08
+#define USB_CDC_TERMINAL_FUNC_DESC                        0x09
+#define USB_CDC_NETWORK_CHANNEL_FUNC_DESC                 0x0A
+#define USB_CDC_PROTOCOL_UNIT_FUNC_DESC                   0x0B
+#define USB_CDC_EXTENSION_UNIT_FUNC_DESC                  0x0C
+#define USB_CDC_MULTI_CHANNEL_FUNC_DESC                   0x0D
+#define USB_CDC_CAPI_CONTROL_FUNC_DESC                    0x0E
+#define USB_CDC_ETHERNET_NETWORKING_FUNC_DESC             0x0F
+#define USB_CDC_ATM_NETWORKING_FUNC_DESC                  0x10
+#define USB_CDC_WIRELESS_CONTROL_FUNC_DESC                0x11
+#define USB_CDC_MOBILE_DIRECT_LINE_FUNC_DESC              0x12
+#define USB_CDC_MDLM_DETAIL_FUNC_DESC                     0x13
+#define USB_CDC_DEVICE_MANAGEMENT_FUNC_DESC               0x14
+#define USB_CDC_OBEX_FUNC_DESC                            0x15
+#define USB_CDC_COMMAND_SET_FUNC_DESC                     0x16
+#define USB_CDC_COMMAND_SET_DETAIL_FUNC_DESC              0x17
+#define USB_CDC_TELEPHONE_CONTROL_FUNC_DESC               0x18
+#define USB_CDC_OBEX_SERVICE_ID_FUNC_DESC                 0x19
+
 #define USB_DEVICE_CONFIG_CDC_ACM_MAX_INSTANCE                  1
 #define USB_DEVICE_CONFIG_CDC_COMM_CLASS_CODE                   0x02
 #define USB_DEVICE_CONFIG_CDC_DATA_CLASS_CODE                   0x0A
@@ -163,64 +230,13 @@ typedef struct
 extern "C" {
 #endif
 
-/*!
- * @name USB CDC ACM Class Driver
- * @{
- */
-/*!
- * This function obtains a USB device handle according to the controller ID,
- * initializes the CDC ACM class with the class configure parameters and
- * creates the mutex for each pipe.
- *
- * @param controllerId The ID of the controller. The value can be chosen from the
- *      kUSB_ControllerKhci0, kUSB_ControllerKhci1, kUSB_ControllerEhci0, or
- *      kUSB_ControllerEhci1.
- * @param config The user configuration structure of type usb_dev_class_config_t.
- *      The user populates the members of this structure and passes the pointer
- *      of this structure into this function.
- */
 usb_status_t usb_dev_cdc_init(uint8_t controllerId,
                               usb_dev_class_config_t *config,
                               class_handle_t *handle);
-
-/*!
- * This function destroys the mutex for each pipe, deinitializes each endpoint
- * of the CDC ACM class and frees the CDC ACM class handle.
- */
 usb_status_t usb_dev_cdc_deinit(class_handle_t handle);
-
-/*!
- * This function responds to various events including the common device events
- * and the class-specific events. For class-specific events, it calls the class
- * callback defined in the application to deal with the class-specific event.
- */
 usb_status_t usb_dev_cdc_event(void *handle, uint32_t event, void *param);
-
-/*!
- * This function checks whether the endpoint is sending packet, then it primes
- * the endpoint with the buffer address and the buffer length if the pipe is not
- * busy. Otherwise, it ignores this transfer by returning an error code.
- *
- * @param handle The class handle of the CDC ACM class.
- * @param ep The endpoint number of the transfer.
- * @param buffer The pointer to the buffer to be transferred.
- * @param length The length of the buffer to be transferred.
- */
 usb_status_t usb_dev_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buffer, uint32_t length);
-
-/*!
- * This function checks whether the endpoint is receiving packet, then it primes
- * the endpoint with the buffer address and the buffer length if the pipe is not
- * busy. Otherwise, it ignores this transfer by returning an error code.
- *
- * @param handle The class handle of the CDC ACM class.
- * @param ep The endpoint number of the transfer.
- * @param buffer The pointer to the buffer to be transferred.
- * @param length The length of the buffer to be transferred.
- */
 usb_status_t usb_dev_cdc_recv(class_handle_t handle, uint8_t ep, uint8_t *buffer, uint32_t length);
-
-/*! @}*/
 
 #if defined(__cplusplus)
 }

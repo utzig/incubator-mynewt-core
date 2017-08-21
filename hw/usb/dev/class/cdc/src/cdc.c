@@ -584,8 +584,7 @@ usb_dev_cdc_deinit(class_handle_t handle)
 }
 
 usb_status_t
-usb_dev_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buffer,
-                 uint32_t length)
+usb_dev_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buf, uint32_t len)
 {
     usb_device_cdc_acm_struct_t *cdc;
     usb_status_t err = kStatus_USB_Error;
@@ -610,7 +609,7 @@ usb_dev_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buffer,
         }
 
         OS_ENTER_CRITICAL(sr);
-        err = usb_device_send_req(cdc->handle, ep, buffer, length);
+        err = usb_device_send_req(cdc->handle, ep, buf, len);
         if (err == kStatus_USB_Success) {
             pipe->isBusy = 1;
         }
@@ -621,8 +620,7 @@ usb_dev_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buffer,
 }
 
 usb_status_t
-usb_dev_cdc_recv(class_handle_t handle, uint8_t ep, uint8_t *buffer,
-                 uint32_t length)
+usb_dev_cdc_recv(class_handle_t handle, uint8_t ep, uint8_t *buf, uint32_t len)
 {
     usb_device_cdc_acm_struct_t *cdc;
     usb_status_t err = kStatus_USB_Error;
@@ -633,13 +631,13 @@ usb_dev_cdc_recv(class_handle_t handle, uint8_t ep, uint8_t *buffer,
     }
 
     cdc = (usb_device_cdc_acm_struct_t *)handle;
-    if (cdc->bulkOut.isBusy == 1) {
+    if (cdc->bulkOut.isBusy) {
         return kStatus_USB_Busy;
     }
 
     OS_ENTER_CRITICAL(sr);
-    err = usb_device_recv_req(cdc->handle, ep, buffer, length);
-    if (kStatus_USB_Success == err) {
+    err = usb_device_recv_req(cdc->handle, ep, buf, len);
+    if (err == kStatus_USB_Success) {
         cdc->bulkOut.isBusy = 1;
     }
     OS_EXIT_CRITICAL(sr);

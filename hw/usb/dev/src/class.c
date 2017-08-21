@@ -65,7 +65,7 @@
 #endif
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_MSC)
-#include "usb_device_msc.h"
+#include <msc/msc.h>
 #endif
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_AUDIO)
@@ -116,9 +116,9 @@ static const usb_device_class_map_t s_UsbDeviceClassInterfaceMap[] = {
 #endif
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_MSC)
     {
-        .init   = USB_DeviceMscInit,
-        .deinit = USB_DeviceMscDeinit,
-        .cb     = USB_DeviceMscEvent,
+        .init   = usb_dev_msc_init,
+        .deinit = usb_dev_msc_deinit,
+        .cb     = usb_dev_msc_event,
         .type   = kUSB_DeviceClassTypeMsc,
     },
 #endif
