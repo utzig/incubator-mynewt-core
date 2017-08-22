@@ -57,7 +57,7 @@
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_NUM)
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_HID)
-#include "usb_device_hid.h"
+#include <hid/hid.h>
 #endif
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_CDC_ACM)
@@ -100,9 +100,9 @@
 static const usb_device_class_map_t s_UsbDeviceClassInterfaceMap[] = {
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_HID)
     {
-        .init   = USB_DeviceHidInit,
-        .deinit = USB_DeviceHidDeinit,
-        .cb     = USB_DeviceHidEvent,
+        .init   = usb_dev_hid_init,
+        .deinit = usb_dev_hid_deinit,
+        .cb     = usb_dev_hid_event,
         .type   = kUSB_DeviceClassTypeHid,
     },
 #endif
