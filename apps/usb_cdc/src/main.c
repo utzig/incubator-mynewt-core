@@ -78,91 +78,10 @@ STATS_NAME(gpio_stats, toggles)
 STATS_NAME_END(gpio_stats)
 #endif
 
-#if 0
-#if MYNEWT_VAL(USB_DEVICE_CONFIG_EHCI)
-    #define CONTROLLER_ID kUSB_ControllerEhci0
-    #define DATA_BUFF_SIZE HS_CDC_VCOM_BULK_OUT_PACKET_SIZE
-#elif MYNEWT_VAL(USB_DEVICE_CONFIG_KHCI)
-    #define CONTROLLER_ID kUSB_ControllerKhci0
-    #define DATA_BUFF_SIZE FS_CDC_VCOM_BULK_OUT_PACKET_SIZE
-#elif MYNEWT_VAL(USB_DEVICE_CONFIG_LPCIP3511FS)
-    #define CONTROLLER_ID kUSB_ControllerLpcIp3511Fs0
-    #define DATA_BUFF_SIZE FS_CDC_VCOM_BULK_OUT_PACKET_SIZE
-#endif
-#endif
-
 #define CONTROLLER_ID kUSB_ControllerKhci0
 
 #define USB_DEVICE_SPECIFIC_BCD_VERSION                   0x0200
 #define USB_DEVICE_DEMO_BCD_VERSION                       0x0101
-
-#define CDC_COMM_CLASS                                    0x02
-#define CDC_DATA_CLASS                                    0x0A
-
-/* Communication Class SubClass Codes */
-#define USB_CDC_DIRECT_LINE_CONTROL_MODEL                 0x01
-#define USB_CDC_ABSTRACT_CONTROL_MODEL                    0x02
-#define USB_CDC_TELEPHONE_CONTROL_MODEL                   0x03
-#define USB_CDC_MULTI_CHANNEL_CONTROL_MODEL               0x04
-#define USB_CDC_CAPI_CONTROL_MOPDEL                       0x05
-#define USB_CDC_ETHERNET_NETWORKING_CONTROL_MODEL         0x06
-#define USB_CDC_ATM_NETWORKING_CONTROL_MODEL              0x07
-#define USB_CDC_WIRELESS_HANDSET_CONTROL_MODEL            0x08
-#define USB_CDC_DEVICE_MANAGEMENT                         0x09
-#define USB_CDC_MOBILE_DIRECT_LINE_MODEL                  0x0A
-#define USB_CDC_OBEX                                      0x0B
-#define USB_CDC_ETHERNET_EMULATION_MODEL                  0x0C
-
-#define USB_CDC_NO_CLASS_SPECIFIC_PROTOCOL                0x00
-#define USB_CDC_AT_250_PROTOCOL                           0x01
-#define USB_CDC_AT_PCCA_101_PROTOCOL                      0x02
-#define USB_CDC_AT_PCCA_101_ANNEX_O                       0x03
-#define USB_CDC_AT_GSM_7_07                               0x04
-#define USB_CDC_AT_3GPP_27_007                            0x05
-#define USB_CDC_AT_TIA_CDMA                               0x06
-#define USB_CDC_ETHERNET_EMULATION_PROTOCOL               0x07
-#define USB_CDC_EXTERNAL_PROTOCOL                         0xFE
-#define USB_CDC_VENDOR_SPECIFIC                           0xFF
-
-#define USB_CDC_PYHSICAL_INTERFACE_PROTOCOL               0x30
-#define USB_CDC_HDLC_PROTOCOL                             0x31
-#define USB_CDC_TRANSPARENT_PROTOCOL                      0x32
-#define USB_CDC_MANAGEMENT_PROTOCOL                       0x50
-#define USB_CDC_DATA_LINK_Q931_PROTOCOL                   0x51
-#define USB_CDC_DATA_LINK_Q921_PROTOCOL                   0x52
-#define USB_CDC_DATA_COMPRESSION_V42BIS                   0x90
-#define USB_CDC_EURO_ISDN_PROTOCOL                        0x91
-#define USB_CDC_RATE_ADAPTION_ISDN_V24                    0x92
-#define USB_CDC_CAPI_COMMANDS                             0x93
-#define USB_CDC_HOST_BASED_DRIVER                         0xFD
-#define USB_CDC_UNIT_FUNCTIONAL                           0xFE
-
-#define USB_CDC_HEADER_FUNC_DESC                          0x00
-#define USB_CDC_CALL_MANAGEMENT_FUNC_DESC                 0x01
-#define USB_CDC_ABSTRACT_CONTROL_FUNC_DESC                0x02
-#define USB_CDC_DIRECT_LINE_FUNC_DESC                     0x03
-#define USB_CDC_TELEPHONE_RINGER_FUNC_DESC                0x04
-#define USB_CDC_TELEPHONE_REPORT_FUNC_DESC                0x05
-#define USB_CDC_UNION_FUNC_DESC                           0x06
-#define USB_CDC_COUNTRY_SELECT_FUNC_DESC                  0x07
-#define USB_CDC_TELEPHONE_MODES_FUNC_DESC                 0x08
-#define USB_CDC_TERMINAL_FUNC_DESC                        0x09
-#define USB_CDC_NETWORK_CHANNEL_FUNC_DESC                 0x0A
-#define USB_CDC_PROTOCOL_UNIT_FUNC_DESC                   0x0B
-#define USB_CDC_EXTENSION_UNIT_FUNC_DESC                  0x0C
-#define USB_CDC_MULTI_CHANNEL_FUNC_DESC                   0x0D
-#define USB_CDC_CAPI_CONTROL_FUNC_DESC                    0x0E
-#define USB_CDC_ETHERNET_NETWORKING_FUNC_DESC             0x0F
-#define USB_CDC_ATM_NETWORKING_FUNC_DESC                  0x10
-#define USB_CDC_WIRELESS_CONTROL_FUNC_DESC                0x11
-#define USB_CDC_MOBILE_DIRECT_LINE_FUNC_DESC              0x12
-#define USB_CDC_MDLM_DETAIL_FUNC_DESC                     0x13
-#define USB_CDC_DEVICE_MANAGEMENT_FUNC_DESC               0x14
-#define USB_CDC_OBEX_FUNC_DESC                            0x15
-#define USB_CDC_COMMAND_SET_FUNC_DESC                     0x16
-#define USB_CDC_COMMAND_SET_DETAIL_FUNC_DESC              0x17
-#define USB_CDC_TELEPHONE_CONTROL_FUNC_DESC               0x18
-#define USB_CDC_OBEX_SERVICE_ID_FUNC_DESC                 0x19
 
 #define USB_DESCRIPTOR_LENGTH_CONFIGURATION_ALL           67
 #define USB_DESCRIPTOR_LENGTH_CDC_HEADER_FUNC             5
@@ -194,7 +113,6 @@ STATS_NAME_END(gpio_stats)
 #define HS_CDC_VCOM_BULK_OUT_PACKET_SIZE                  512
 #define FS_CDC_VCOM_BULK_OUT_PACKET_SIZE                  64
 #define DATA_BUFF_SIZE                                    FS_CDC_VCOM_BULK_OUT_PACKET_SIZE
-
 
 #define USB_DESCRIPTOR_TYPE_CDC_CS_INTERFACE              0x24
 #define USB_DESCRIPTOR_TYPE_CDC_CS_ENDPOINT               0x25
@@ -239,7 +157,7 @@ typedef struct _usb_cdc_vcom_t
     volatile uint8_t attach;
     //xTaskHandle deviceTaskHandle;
     //xTaskHandle applicationTaskHandle;
-    uint8_t speed; /* Speed of USB device. USB_SPEED_FULL/USB_SPEED_LOW/USB_SPEED_HIGH.                 */
+    uint8_t speed;
     volatile uint8_t startTransactions;
     uint8_t currentConfiguration;
     uint8_t currentInterfaceAlternateSetting[USB_CDC_VCOM_INTERFACE_COUNT];
@@ -262,7 +180,7 @@ static usb_status_t usb_device_cdc_cb(class_handle_t handle, uint32_t event,
 static usb_status_t usb_device_cb(usb_device_handle handle, uint32_t event,
         void *param);
 
-extern usb_device_endpoint_struct_t g_UsbDeviceCdcVcomDicEndpoints[];
+extern usb_dev_ep_t g_UsbDeviceCdcVcomDicEndpoints[];
 usb_cdc_vcom_t s_cdc_vcom;
 
 static uint8_t s_lineCoding[LINE_CODING_SIZE] = {
@@ -295,7 +213,7 @@ static USB_DATA_ALIGNMENT uint8_t s_currSendBuf[DATA_BUFF_SIZE];
 static uint32_t s_recvSize = 0;
 static uint32_t s_sendSize = 0;
 
-usb_device_endpoint_struct_t g_UsbDeviceCdcVcomCicEndpoints[USB_CDC_VCOM_ENDPOINT_CIC_COUNT] = {
+usb_dev_ep_t g_UsbDeviceCdcVcomCicEndpoints[USB_CDC_VCOM_ENDPOINT_CIC_COUNT] = {
     {
         USB_CDC_VCOM_INTERRUPT_IN_ENDPOINT | (USB_IN << 7),
         USB_ENDPOINT_INTERRUPT,
@@ -303,7 +221,7 @@ usb_device_endpoint_struct_t g_UsbDeviceCdcVcomCicEndpoints[USB_CDC_VCOM_ENDPOIN
     },
 };
 
-usb_device_endpoint_struct_t g_UsbDeviceCdcVcomDicEndpoints[USB_CDC_VCOM_ENDPOINT_DIC_COUNT] = {
+usb_dev_ep_t g_UsbDeviceCdcVcomDicEndpoints[USB_CDC_VCOM_ENDPOINT_DIC_COUNT] = {
     {
         USB_CDC_VCOM_BULK_IN_ENDPOINT | (USB_IN << 7),
         USB_ENDPOINT_BULK,
@@ -316,7 +234,7 @@ usb_device_endpoint_struct_t g_UsbDeviceCdcVcomDicEndpoints[USB_CDC_VCOM_ENDPOIN
     }
 };
 
-usb_device_interface_struct_t g_UsbDeviceCdcVcomCommunicationInterface[] = {{
+usb_dev_itf_t g_UsbDeviceCdcVcomCommunicationInterface[] = {{
     0,
     {
         USB_CDC_VCOM_ENDPOINT_CIC_COUNT,
@@ -324,7 +242,7 @@ usb_device_interface_struct_t g_UsbDeviceCdcVcomCommunicationInterface[] = {{
     },
 }};
 
-usb_device_interface_struct_t g_UsbDeviceCdcVcomDataInterface[] = {{
+usb_dev_itf_t g_UsbDeviceCdcVcomDataInterface[] = {{
     0,
     {
         USB_CDC_VCOM_ENDPOINT_DIC_COUNT,
@@ -332,14 +250,14 @@ usb_device_interface_struct_t g_UsbDeviceCdcVcomDataInterface[] = {{
     },
 }};
 
-usb_device_interfaces_struct_t g_UsbDeviceCdcVcomInterfaces[USB_CDC_VCOM_INTERFACE_COUNT] = {
+usb_dev_itfs_t g_UsbDeviceCdcVcomInterfaces[USB_CDC_VCOM_INTERFACE_COUNT] = {
     {
         USB_CDC_VCOM_CIC_CLASS,
         USB_CDC_VCOM_CIC_SUBCLASS,
         USB_CDC_VCOM_CIC_PROTOCOL,
         USB_CDC_VCOM_COMM_INTERFACE_INDEX,
         g_UsbDeviceCdcVcomCommunicationInterface,
-        sizeof(g_UsbDeviceCdcVcomCommunicationInterface) / sizeof(usb_device_interfaces_struct_t)
+        sizeof(g_UsbDeviceCdcVcomCommunicationInterface) / sizeof(usb_dev_itfs_t)
     },
     {
         USB_CDC_VCOM_DIC_CLASS,
@@ -347,7 +265,7 @@ usb_device_interfaces_struct_t g_UsbDeviceCdcVcomInterfaces[USB_CDC_VCOM_INTERFA
         USB_CDC_VCOM_DIC_PROTOCOL,
         USB_CDC_VCOM_DATA_INTERFACE_INDEX,
         g_UsbDeviceCdcVcomDataInterface,
-        sizeof(g_UsbDeviceCdcVcomDataInterface) / sizeof(usb_device_interfaces_struct_t)
+        sizeof(g_UsbDeviceCdcVcomDataInterface) / sizeof(usb_dev_itfs_t)
     },
 };
 
@@ -367,7 +285,7 @@ static usb_device_interface_list_t g_UsbDeviceCdcVcomInterfaceList[USB_DEVICE_CO
     },
 };
 
-static usb_device_class_struct_t g_UsbDeviceCdcVcomConfig = {
+static usb_dev_class_t g_UsbDeviceCdcVcomConfig = {
     g_UsbDeviceCdcVcomInterfaceList,
     kUSB_DeviceClassTypeCdc,
     USB_DEVICE_CONFIGURATION_COUNT,
@@ -382,7 +300,7 @@ static usb_dev_class_config_t cdc_config[] = {
 };
 
 /* USB device class configuraion information */
-static usb_device_class_config_list_struct_t s_cdcAcmConfigList = {
+static usb_dev_class_configs_t s_cdcAcmConfigList = {
     cdc_config,
     usb_device_cb,
     1,
@@ -697,9 +615,9 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
     uint32_t len;
     uint16_t *uartBitmap;
     usb_cdc_acm_info_t *acmInfo = &s_usbCdcAcmInfo;
-    usb_device_cdc_acm_request_param_struct_t *acmReqParam;
+    usb_dev_cdc_req_param_t *acmReqParam;
     usb_dev_ep_cb_msg_t *epCbParam;
-    acmReqParam = (usb_device_cdc_acm_request_param_struct_t *)param;
+    acmReqParam = (usb_dev_cdc_req_param_t *)param;
     epCbParam = (usb_dev_ep_cb_msg_t *)param;
 
     //printf("cdc event=%d\n", event);
@@ -744,7 +662,7 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
         }
         break;
     case kUSB_DeviceCdcEventSerialStateNotif:
-        ((usb_device_cdc_acm_struct_t *)handle)->hasSentState = 0;
+        ((usb_dev_cdc_t *)handle)->hasSentState = 0;
         error = kStatus_USB_Success;
         break;
     case kUSB_DeviceCdcEventSendEncapsulatedCommand:
@@ -831,13 +749,13 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
         uartBitmap = (uint16_t *)&acmInfo->serialStateBuf[NOTIF_PACKET_SIZE + UART_BITMAP_SIZE - 2];
         *uartBitmap = acmInfo->uartState;
         len = (uint32_t)(NOTIF_PACKET_SIZE + UART_BITMAP_SIZE);
-        if (!((usb_device_cdc_acm_struct_t *)handle)->hasSentState) {
+        if (!((usb_dev_cdc_t *)handle)->hasSentState) {
             error = usb_dev_cdc_send(handle, USB_CDC_VCOM_INTERRUPT_IN_ENDPOINT, acmInfo->serialStateBuf, len);
             if (error != kStatus_USB_Success) {
                 //FIXME
                 //usb_echo("kUSB_DeviceCdcEventSetControlLineState error!");
             }
-            ((usb_device_cdc_acm_struct_t *)handle)->hasSentState = 1;
+            ((usb_dev_cdc_t *)handle)->hasSentState = 1;
         }
 
         if (acmInfo->dteStatus & USB_DEVICE_CDC_CONTROL_SIG_BITMAP_CARRIER_ACTIVATION) {
@@ -876,7 +794,7 @@ usb_device_cb(usb_device_handle handle, uint32_t event, void *param)
 {
     usb_status_t error = kStatus_USB_Error;
 
-    //printf("event=%d\n", event);
+    //printf("event=%lu\n", event);
     switch (event) {
     case kUSB_DeviceEventBusReset:
         s_cdc_vcom.attach = 0;
@@ -951,7 +869,7 @@ usb_device_application_init(void)
     if (status == kStatus_USB_Success) {
         //FIXME
         //usb_echo("USB device CDC virtual com demo\r\n");
-        s_cdc_vcom.cdcAcmHandle = s_cdcAcmConfigList.config->classHandle;
+        s_cdc_vcom.cdcAcmHandle = s_cdcAcmConfigList.config->handle;
     } else {
         //FIXME
         //usb_echo("USB device init failed\r\n");
@@ -967,6 +885,7 @@ static void
 usb_app_task_handler(void *arg)
 {
     usb_status_t error = kStatus_USB_Error;
+    uint8_t last_attach = s_cdc_vcom.attach;
     int i;
 
     while (1) {
@@ -1016,7 +935,10 @@ usb_app_task_handler(void *arg)
             }
 #endif
         }
-        //printf("attach=%d, startTransaction=%d\n", s_cdc_vcom.attach, s_cdc_vcom.startTransactions);
+        if (last_attach != s_cdc_vcom.attach) {
+            printf("attach=%d, startTransaction=%d\n", s_cdc_vcom.attach, s_cdc_vcom.startTransactions);
+            last_attach = s_cdc_vcom.attach;
+        }
         os_time_delay(1);
     }
 }
@@ -1104,7 +1026,7 @@ main(int argc, char **argv)
     stats_register("gpio_toggle", STATS_HDR(g_stats_gpio_toggle));
 #endif
 
-    console_printf("booting\n");
+    printf("booting\n");
 
     init_tasks();
 

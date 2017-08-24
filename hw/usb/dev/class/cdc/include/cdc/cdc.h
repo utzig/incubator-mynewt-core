@@ -193,45 +193,44 @@ typedef enum
     kUSB_DeviceCdcEventSetLineCoding,
     kUSB_DeviceCdcEventSetControlLineState,
     kUSB_DeviceCdcEventSendBreak,
-} usb_device_cdc_acm_event_t;
+} usb_dev_cdc_event_t;
 
 typedef struct
 {
-    uint8_t  **buffer;       /*!< The pointer to the address of the buffer for CDC class request. */
-    uint32_t *length;        /*!< The pointer to the length of the buffer for CDC class request. */
-    uint16_t interfaceIndex; /*!< The interface index of the setup packet. */
-    uint16_t setupValue;     /*!< The wValue field of the setup packet. */
-    uint8_t  isSetup;        /*!< The flag indicates if it is a setup packet, 1: yes, 0: no. */
-} usb_device_cdc_acm_request_param_struct_t;
+    uint8_t  **buffer;
+    uint32_t *length;
+    uint16_t interfaceIndex;
+    uint16_t setupValue;
+    uint8_t  isSetup;
+} usb_dev_cdc_req_param_t;
 
 typedef struct
 {
-    struct os_mutex mutex;      /*!< The mutex of the pipe. */
-    uint8_t ep;                 /*!< The endpoint number of the pipe. */
-    uint8_t isBusy;             /*!< 1: The pipe is transferring packet, 0: The pipe is idle. */
-} usb_device_cdc_acm_pipe_t;
+    struct os_mutex mutex;
+    uint8_t ep;
+    bool is_busy;
+} usb_dev_cdc_pipe_t;
 
 typedef struct
 {
-    usb_device_handle handle;                           /*!< The handle of the USB device. */
-    usb_dev_class_config_t *configStruct;               /*!< The class configure structure. */
-    usb_device_interface_struct_t *commInterfaceHandle; /*!< The CDC communication interface handle. */
-    usb_device_interface_struct_t *dataInterfaceHandle; /*!< The CDC data interface handle. */
-    usb_device_cdc_acm_pipe_t bulkIn;                   /*!< The bulk in pipe for sending packet to host. */
-    usb_device_cdc_acm_pipe_t bulkOut;                  /*!< The bulk out pipe for receiving packet from host. */
-    usb_device_cdc_acm_pipe_t interruptIn; /*!< The interrupt in pipe for notifying the device state to host. */
-    uint8_t configuration;                 /*!< The current configuration value. */
-    uint8_t interfaceNumber;               /*!< The current interface number. */
-    uint8_t alternate;                     /*!< The alternate setting value of the interface. */
-    uint8_t hasSentState; /*!< 1: The device has primed the state in interrupt pipe, 0: Not primed the state. */
-} usb_device_cdc_acm_struct_t;
+    usb_device_handle handle;
+    usb_dev_class_config_t *config;
+    usb_dev_itf_t *comm_itf;
+    usb_dev_itf_t *data_itf;
+    usb_dev_cdc_pipe_t bulkIn;
+    usb_dev_cdc_pipe_t bulkOut;
+    usb_dev_cdc_pipe_t interruptIn;
+    uint8_t config_num;
+    uint8_t itf_num;
+    uint8_t alternate;
+    uint8_t hasSentState;
+} usb_dev_cdc_t;
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-usb_status_t usb_dev_cdc_init(uint8_t controllerId,
-                              usb_dev_class_config_t *config,
+usb_status_t usb_dev_cdc_init(uint8_t ctrl_id, usb_dev_class_config_t *config,
                               class_handle_t *handle);
 usb_status_t usb_dev_cdc_deinit(class_handle_t handle);
 usb_status_t usb_dev_cdc_event(void *handle, uint32_t event, void *param);

@@ -178,19 +178,10 @@ static const usb_device_class_map_t s_UsbDeviceClassInterfaceMap[] = {
     },
 };
 
-//FIXME: this must be moved from here, USB_GLOBAL is platform specific
-//USB_GLOBAL
 static usb_device_common_class_t s_UsbDeviceCommonClassStruct[MYNEWT_VAL(USB_DEVICE_CONFIG_NUM)];
 
-/*!
- * This function allocates a a device common class handle.
- *
- * @param controllerId   The controller id of the USB IP. Please refer to the enumeration usb_controller_index_t.
- * @param handle          It is out parameter, is used to return pointer of the device common class handle to the
- * caller.
- */
 static usb_status_t
-usb_device_class_alloc_handle(uint8_t controllerId, usb_device_common_class_t **handle)
+usb_device_class_alloc_handle(uint8_t ctrl_id, usb_device_common_class_t **handle)
 {
     int i;
     usb_status_t err = kStatus_USB_Busy;
@@ -201,7 +192,7 @@ usb_device_class_alloc_handle(uint8_t controllerId, usb_device_common_class_t **
     /* Check the controller is initialized or not. */
     for (i = 0; i < MYNEWT_VAL(USB_DEVICE_CONFIG_NUM); i++) {
         if (s_UsbDeviceCommonClassStruct[i].handle &&
-            s_UsbDeviceCommonClassStruct[i].controllerId == controllerId) {
+            s_UsbDeviceCommonClassStruct[i].ctrl_id == ctrl_id) {
             err = kStatus_USB_Error;
             goto out;
         }
@@ -210,7 +201,7 @@ usb_device_class_alloc_handle(uint8_t controllerId, usb_device_common_class_t **
     /* Get a free common class handle. */
     for (i = 0; i < MYNEWT_VAL(USB_DEVICE_CONFIG_NUM); i++) {
         if (!s_UsbDeviceCommonClassStruct[i].handle) {
-            s_UsbDeviceCommonClassStruct[i].controllerId = controllerId;
+            s_UsbDeviceCommonClassStruct[i].ctrl_id = ctrl_id;
             *handle = &s_UsbDeviceCommonClassStruct[i];
             err = kStatus_USB_Success;
             goto out;
@@ -222,13 +213,8 @@ out:
     return err;
 }
 
-/*!
- * This function frees a device common class handle.
- *
- * @param controllerId   The controller id of the USB IP. Please refer to the enumeration usb_controller_index_t.
- */
 static usb_status_t
-usb_device_class_free_handle(uint8_t controllerId)
+usb_device_class_free_handle(uint8_t ctrl_id)
 {
     int i;
     os_sr_t sr;
@@ -237,10 +223,10 @@ usb_device_class_free_handle(uint8_t controllerId)
 
     for (i = 0; i < MYNEWT_VAL(USB_DEVICE_CONFIG_NUM); i++) {
         if (s_UsbDeviceCommonClassStruct[i].handle &&
-            s_UsbDeviceCommonClassStruct[i].controllerId == controllerId) {
+            s_UsbDeviceCommonClassStruct[i].ctrl_id == ctrl_id) {
             s_UsbDeviceCommonClassStruct[i].handle = NULL;
-            s_UsbDeviceCommonClassStruct[i].configList = NULL;
-            s_UsbDeviceCommonClassStruct[i].controllerId = 0;
+            s_UsbDeviceCommonClassStruct[i].configs = NULL;
+            s_UsbDeviceCommonClassStruct[i].ctrl_id = 0;
             OS_EXIT_CRITICAL(sr);
             return kStatus_USB_Success;
         }
@@ -251,8 +237,7 @@ usb_device_class_free_handle(uint8_t controllerId)
 }
 
 static usb_status_t
-usb_device_class_handle_by_id(uint8_t controllerId,
-                              usb_device_common_class_t **handle)
+usb_device_class_handle_by_id(uint8_t ctrl_id, usb_device_common_class_t **handle)
 {
     int i;
     os_sr_t sr;
@@ -260,7 +245,7 @@ usb_device_class_handle_by_id(uint8_t controllerId,
     OS_ENTER_CRITICAL(sr);
     for (i = 0; i < MYNEWT_VAL(USB_DEVICE_CONFIG_NUM); i++) {
         if (s_UsbDeviceCommonClassStruct[i].handle &&
-            s_UsbDeviceCommonClassStruct[i].controllerId == controllerId) {
+            s_UsbDeviceCommonClassStruct[i].ctrl_id == ctrl_id) {
             *handle = &s_UsbDeviceCommonClassStruct[i];
             OS_EXIT_CRITICAL(sr);
             return kStatus_USB_Success;
@@ -292,7 +277,7 @@ usb_device_class_handle_by_device(usb_device_handle device,
 }
 
 usb_status_t
-usb_device_class_get_handle(uint8_t controllerId, usb_device_handle *handle)
+usb_device_class_get_handle(uint8_t ctrl_id, usb_device_handle *handle)
 {
     int32_t i;
     os_sr_t sr;
@@ -300,7 +285,7 @@ usb_device_class_get_handle(uint8_t controllerId, usb_device_handle *handle)
     OS_ENTER_CRITICAL(sr);
     for (i = 0; i < MYNEWT_VAL(USB_DEVICE_CONFIG_NUM); i++) {
         if (s_UsbDeviceCommonClassStruct[i].handle &&
-            s_UsbDeviceCommonClassStruct[i].controllerId == controllerId) {
+            s_UsbDeviceCommonClassStruct[i].ctrl_id == ctrl_id) {
             *handle = s_UsbDeviceCommonClassStruct[i].handle;
             OS_EXIT_CRITICAL(sr);
             return kStatus_USB_Success;
@@ -310,12 +295,6 @@ usb_device_class_get_handle(uint8_t controllerId, usb_device_handle *handle)
     return kStatus_USB_InvalidParameter;
 }
 
-/*!
- * This function handles the event passed to the class drivers.
- *
- * @param event           The event codes. Please refer to the enumeration usb_device_class_event_t.
- * @param param           The param type is determined by the event code.
- */
 usb_status_t
 usb_device_class_event(usb_device_handle handle, usb_device_class_event_t event, void *param)
 {
@@ -337,12 +316,12 @@ usb_device_class_event(usb_device_handle handle, usb_device_class_event_t event,
     }
 
     mapLen = sizeof(s_UsbDeviceClassInterfaceMap) / sizeof(s_UsbDeviceClassInterfaceMap[0]);
-    for (classIndex = 0; classIndex < classHandle->configList->count; classIndex++) {
+    for (classIndex = 0; classIndex < classHandle->configs->count; classIndex++) {
         for (mapIndex = 0; mapIndex < mapLen; mapIndex++) {
             if (s_UsbDeviceClassInterfaceMap[mapIndex].type ==
-                classHandle->configList->config[classIndex].classInfomation->type) {
+                classHandle->configs->config[classIndex].info->type) {
                 rc = s_UsbDeviceClassInterfaceMap[mapIndex].cb(
-                    (void *)classHandle->configList->config[classIndex].classHandle,
+                    (void *)classHandle->configs->config[classIndex].handle,
                     event, param);
                 if (rc == kStatus_USB_InvalidRequest) {
                     return kStatus_USB_InvalidRequest;
@@ -361,12 +340,6 @@ usb_device_class_event(usb_device_handle handle, usb_device_class_event_t event,
     return err;
 }
 
-/*!
- * This function handles the common class callback.
- *
- * @param event           The event codes. Please refer to the enumeration usb_device_event_t.
- * @param param           The param type is determined by the event code.
- */
 usb_status_t
 usb_device_class_cb(usb_device_handle handle, uint32_t event, void *param)
 {
@@ -374,7 +347,7 @@ usb_device_class_cb(usb_device_handle handle, uint32_t event, void *param)
     usb_status_t err = kStatus_USB_Error;
 
     err = usb_device_class_handle_by_device(handle, &classHandle);
-    if (err != kStatus_USB_Success) {
+    if (err) {
         return err;
     }
 
@@ -383,31 +356,12 @@ usb_device_class_cb(usb_device_handle handle, uint32_t event, void *param)
         usb_device_class_event(handle, kUSB_DeviceClassEventDeviceReset, classHandle);
     }
 
-    return classHandle->configList->deviceCallback(handle, event, param);
+    return classHandle->configs->deviceCallback(handle, event, param);
 }
 
-/*!
- * This function is used to initialize the common class and the supported classes.
- *
- * @param[in] controllerId   The controller id of the USB IP. Please refer to the
- *                           enumeration #usb_controller_index_t.
- * @param[in] configList     The class configurations. The pointer must point to the goblal variable.
- *                           Please refer to the structure #usb_device_class_config_list_struct_t.
- * @param[out] handle        It is out parameter, is used to return pointer of the
- *                           device handle to the caller. The value of parameter
- *                           is a pointer points the device handle, and this design
- *                           is uesd to make simple device align with composite
- *                           device. For composite device, there are many kinds of
- *                           class handle, but there is only one device handle.
- *                           So the handle points to a device instead of a class.
- *                           And the class handle can be got from the
- *                           #usb_dev_class_config_t::classHandle after
- *                           the function successfully.
- */
 usb_status_t
-usb_device_class_init(uint8_t controllerId,
-                      usb_device_class_config_list_struct_t *configList,
-                      usb_device_handle *handle)
+usb_device_class_init(uint8_t ctrl_id, usb_dev_class_configs_t *configs,
+        usb_device_handle *handle)
 {
     usb_device_common_class_t *classHandle;
     usb_status_t err = kStatus_USB_Error;
@@ -415,32 +369,32 @@ usb_device_class_init(uint8_t controllerId,
     uint8_t mapLen;
     uint8_t classIndex;
 
-    if (!handle || !configList || !configList->deviceCallback) {
+    if (!handle || !configs || !configs->deviceCallback) {
         return kStatus_USB_InvalidParameter;
     }
 
-    err = usb_device_class_alloc_handle(controllerId, &classHandle);
-    if (err != kStatus_USB_Success) {
+    err = usb_device_class_alloc_handle(ctrl_id, &classHandle);
+    if (err) {
         return err;
     }
 
-    classHandle->configList = configList;
-    err = usb_dev_init(controllerId, usb_device_class_cb, &classHandle->handle);
+    classHandle->configs = configs;
+    err = usb_dev_init(ctrl_id, usb_device_class_cb, &classHandle->handle);
     if (err != kStatus_USB_Success) {
         usb_device_deinit(classHandle->handle);
-        usb_device_class_free_handle(controllerId);
+        usb_device_class_free_handle(ctrl_id);
         return err;
     }
 
     //FIXME: refactor this is because it's the same loop of .cb calling fn ...
     mapLen = sizeof(s_UsbDeviceClassInterfaceMap) / sizeof(usb_device_class_map_t);
-    for (classIndex = 0; classIndex < classHandle->configList->count; classIndex++) {
+    for (classIndex = 0; classIndex < classHandle->configs->count; classIndex++) {
         for (mapIndex = 0; mapIndex < mapLen; mapIndex++) {
-            if (classHandle->configList->config[classIndex].classInfomation->type ==
+            if (classHandle->configs->config[classIndex].info->type ==
                 s_UsbDeviceClassInterfaceMap[mapIndex].type) {
                 (void)s_UsbDeviceClassInterfaceMap[mapIndex].init(
-                    controllerId, &classHandle->configList->config[classIndex],
-                    &classHandle->configList->config[classIndex].classHandle);
+                    ctrl_id, &classHandle->configs->config[classIndex],
+                    &classHandle->configs->config[classIndex].handle);
             }
         }
     }
@@ -449,13 +403,8 @@ usb_device_class_init(uint8_t controllerId,
     return err;
 }
 
-/*!
- * This function is used to de-initialize the common class and the supported classes.
- *
- * @param controllerId   The controller id of the USB IP. Please refer to the enumeration usb_controller_index_t.
- */
 usb_status_t
-usb_device_class_deinit(uint8_t controllerId)
+usb_device_class_deinit(uint8_t ctrl_id)
 {
     usb_device_common_class_t *classHandle;
     usb_status_t err = kStatus_USB_Error;
@@ -463,46 +412,39 @@ usb_device_class_deinit(uint8_t controllerId)
     uint8_t mapLen;
     uint8_t classIndex;
 
-    err = usb_device_class_handle_by_id(controllerId, &classHandle);
+    err = usb_device_class_handle_by_id(ctrl_id, &classHandle);
     if (err != kStatus_USB_Success) {
         return err;
     }
 
     //FIXME: refactor...
     mapLen = sizeof(s_UsbDeviceClassInterfaceMap) / sizeof(usb_device_class_map_t);
-    for (classIndex = 0; classIndex < classHandle->configList->count; classIndex++) {
+    for (classIndex = 0; classIndex < classHandle->configs->count; classIndex++) {
         for (mapIndex = 0; mapIndex < mapLen; mapIndex++) {
-            if (classHandle->configList->config[classIndex].classInfomation->type ==
+            if (classHandle->configs->config[classIndex].info->type ==
                 s_UsbDeviceClassInterfaceMap[mapIndex].type) {
                 (void)s_UsbDeviceClassInterfaceMap[mapIndex].deinit(
-                    classHandle->configList->config[classIndex].classHandle);
+                    classHandle->configs->config[classIndex].handle);
             }
         }
     }
 
     err = usb_device_deinit(classHandle->handle);
-    if (err == kStatus_USB_Success) {
-        (void)usb_device_class_free_handle(controllerId);
+    if (!err) {
+        (void)usb_device_class_free_handle(ctrl_id);
     }
 
     return err;
 }
 
-/*!
- * This function is used to get the USB bus speed.
- *
- * @param controllerId   The controller id of the USB IP. Please refer to the enumeration usb_controller_index_t.
- * @param speed          It is an OUT parameter, return current speed of the controller.
- */
 usb_status_t
-usb_device_class_get_speed(uint8_t controllerId, uint8_t *speed)
+usb_device_class_get_speed(uint8_t ctrl_id, uint8_t *speed)
 {
     usb_device_common_class_t *classHandle;
     usb_status_t err = kStatus_USB_Error;
 
-    /* Get the common class handle according to the controller id. */
-    err = usb_device_class_handle_by_id(controllerId, &classHandle);
-    if (err != kStatus_USB_Success) {
+    err = usb_device_class_handle_by_id(ctrl_id, &classHandle);
+    if (!err) {
         return err;
     }
 

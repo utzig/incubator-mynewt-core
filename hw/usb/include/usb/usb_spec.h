@@ -49,6 +49,8 @@
 #ifndef __USB_SPEC_H__
 #define __USB_SPEC_H__
 
+#include <stdint.h>
+
 #define USB_SPEED_FULL                                                  0x00
 #define USB_SPEED_LOW                                                   0x01
 #define USB_SPEED_HIGH                                                  0x02
@@ -95,53 +97,53 @@ typedef struct _usb_setup_struct
 #define USB_DESCRIPTOR_TYPE_HID_PHYSICAL                                 0x23
 
 /* USB standard request type */
-#define USB_REQUEST_TYPE_DIR_MASK                                        0x80
-#define USB_REQUEST_TYPE_DIR_SHIFT                                       7
-#define USB_REQUEST_TYPE_DIR_OUT                                         0x00
-#define USB_REQUEST_TYPE_DIR_IN                                          0x80
+#define USB_REQ_TYPE_DIR_MASK                                            0x80
+#define USB_REQ_TYPE_DIR_SHIFT                                           7
+#define USB_REQ_TYPE_DIR_OUT                                             0x00
+#define USB_REQ_TYPE_DIR_IN                                              0x80
 
-#define USB_REQUEST_TYPE_TYPE_MASK                                       0x60
-#define USB_REQUEST_TYPE_TYPE_SHIFT                                      5
-#define USB_REQUEST_TYPE_TYPE_STANDARD                                   0
-#define USB_REQUEST_TYPE_TYPE_CLASS                                      0x20
-#define USB_REQUEST_TYPE_TYPE_VENDOR                                     0x40
+#define USB_REQ_TYPE_TYPE_MASK                                           0x60
+#define USB_REQ_TYPE_TYPE_SHIFT                                          5
+#define USB_REQ_TYPE_TYPE_STANDARD                                       0
+#define USB_REQ_TYPE_TYPE_CLASS                                          0x20
+#define USB_REQ_TYPE_TYPE_VENDOR                                         0x40
 
-#define USB_REQUEST_TYPE_RECIPIENT_MASK                                  0x1F
-#define USB_REQUEST_TYPE_RECIPIENT_SHIFT                                 0
-#define USB_REQUEST_TYPE_RECIPIENT_DEVICE                                0x00
-#define USB_REQUEST_TYPE_RECIPIENT_INTERFACE                             0x01
-#define USB_REQUEST_TYPE_RECIPIENT_ENDPOINT                              0x02
-#define USB_REQUEST_TYPE_RECIPIENT_OTHER                                 0x03
+#define USB_REQ_TYPE_RECIPIENT_MASK                                      0x1F
+#define USB_REQ_TYPE_RECIPIENT_SHIFT                                     0
+#define USB_REQ_TYPE_RECIPIENT_DEVICE                                    0x00
+#define USB_REQ_TYPE_RECIPIENT_INTERFACE                                 0x01
+#define USB_REQ_TYPE_RECIPIENT_ENDPOINT                                  0x02
+#define USB_REQ_TYPE_RECIPIENT_OTHER                                     0x03
 
 /* USB standard request */
-#define USB_REQUEST_STANDARD_GET_STATUS                                  0x00
-#define USB_REQUEST_STANDARD_CLEAR_FEATURE                               0x01
-#define USB_REQUEST_STANDARD_SET_FEATURE                                 0x03
-#define USB_REQUEST_STANDARD_SET_ADDRESS                                 0x05
-#define USB_REQUEST_STANDARD_GET_DESCRIPTOR                              0x06
-#define USB_REQUEST_STANDARD_SET_DESCRIPTOR                              0x07
-#define USB_REQUEST_STANDARD_GET_CONFIGURATION                           0x08
-#define USB_REQUEST_STANDARD_SET_CONFIGURATION                           0x09
-#define USB_REQUEST_STANDARD_GET_INTERFACE                               0x0A
-#define USB_REQUEST_STANDARD_SET_INTERFACE                               0x0B
-#define USB_REQUEST_STANDARD_SYNCH_FRAME                                 0x0C
+#define USB_REQ_STD_GET_STATUS                                           0x00
+#define USB_REQ_STD_CLEAR_FEATURE                                        0x01
+#define USB_REQ_STD_SET_FEATURE                                          0x03
+#define USB_REQ_STD_SET_ADDRESS                                          0x05
+#define USB_REQ_STD_GET_DESCRIPTOR                                       0x06
+#define USB_REQ_STD_SET_DESCRIPTOR                                       0x07
+#define USB_REQ_STD_GET_CONFIGURATION                                    0x08
+#define USB_REQ_STD_SET_CONFIGURATION                                    0x09
+#define USB_REQ_STD_GET_INTERFACE                                        0x0A
+#define USB_REQ_STD_SET_INTERFACE                                        0x0B
+#define USB_REQ_STD_SYNCH_FRAME                                          0x0C
 
 /* USB standard request GET Status */
-#define USB_REQUEST_STANDARD_GET_STATUS_DEVICE_SELF_POWERED_SHIFT        0
-#define USB_REQUEST_STANDARD_GET_STATUS_DEVICE_REMOTE_WARKUP_SHIFT       1
+#define USB_REQ_STD_GET_STATUS_DEVICE_SELF_POWERED_SHIFT                 0
+#define USB_REQ_STD_GET_STATUS_DEVICE_REMOTE_WARKUP_SHIFT                1
 
-#define USB_REQUEST_STANDARD_GET_STATUS_ENDPOINT_HALT_MASK               0x01
-#define USB_REQUEST_STANDARD_GET_STATUS_ENDPOINT_HALT_SHIFT              0
+#define USB_REQ_STD_GET_STATUS_ENDPOINT_HALT_MASK                        0x01
+#define USB_REQ_STD_GET_STATUS_ENDPOINT_HALT_SHIFT                       0
 
-#define USB_REQUEST_STANDARD_GET_STATUS_OTG_STATUS_SELECTOR              0xF000
+#define USB_REQ_STD_GET_STATUS_OTG_STATUS_SELECTOR                       0xF000
 
 /* USB standard request CLEAR/SET feature */
-#define USB_REQUEST_STANDARD_FEATURE_SELECTOR_ENDPOINT_HALT              0
-#define USB_REQUEST_STANDARD_FEATURE_SELECTOR_DEVICE_REMOTE_WAKEUP       1
-#define USB_REQUEST_STANDARD_FEATURE_SELECTOR_DEVICE_TEST_MODE           2
-#define USB_REQUEST_STANDARD_FEATURE_SELECTOR_B_HNP_ENABLE               3
-#define USB_REQUEST_STANDARD_FEATURE_SELECTOR_A_HNP_SUPPORT              4
-#define USB_REQUEST_STANDARD_FEATURE_SELECTOR_A_ALT_HNP_SUPPORT          5
+#define USB_REQ_STD_FEATURE_SELECTOR_ENDPOINT_HALT                       0
+#define USB_REQ_STD_FEATURE_SELECTOR_DEVICE_REMOTE_WAKEUP                1
+#define USB_REQ_STD_FEATURE_SELECTOR_DEVICE_TEST_MODE                    2
+#define USB_REQ_STD_FEATURE_SELECTOR_B_HNP_ENABLE                        3
+#define USB_REQ_STD_FEATURE_SELECTOR_A_HNP_SUPPORT                       4
+#define USB_REQ_STD_FEATURE_SELECTOR_A_ALT_HNP_SUPPORT                   5
 
 /* USB standard descriptor configure bmAttributes */
 #define USB_DESCRIPTOR_CONFIGURE_ATTRIBUTE_D7_MASK                       0x80
@@ -154,13 +156,13 @@ typedef struct _usb_setup_struct
 #define USB_DESCRIPTOR_CONFIGURE_ATTRIBUTE_REMOTE_WAKEUP_SHIFT           5
 
 /* USB standard descriptor endpoint bmAttributes */
-#define USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_MASK                   0x80
-#define USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT                  7
-#define USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_OUT                    0x00
-#define USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_IN                     0x80
+#define USB_DESC_EP_ADDR_DIR_MASK                                  0x80
+#define USB_DESC_EP_ADDR_DIR_SHIFT                                 7
+#define USB_DESC_EP_ADDR_DIR_OUT                                   0x00
+#define USB_DESC_EP_ADDR_DIR_IN                                    0x80
 
-#define USB_DESCRIPTOR_ENDPOINT_ADDRESS_NUMBER_MASK                      0x0F
-#define USB_DESCRIPTOR_ENDPOINT_ADDRESS_NUMBER_SHFIT                     0
+#define USB_DESC_ENDPOINT_ADDRESS_NUMBER_MASK                      0x0F
+#define USB_DESC_ENDPOINT_ADDRESS_NUMBER_SHFIT                     0
 
 #define USB_EP_DIR(ep)                                   (((ep) & 0x80) >> 7)
 #define USB_EP_NUMBER(ep)                                ((ep) & 0x0F)
@@ -190,14 +192,14 @@ typedef struct _usb_setup_struct
 #define USB_DESCRIPTOR_OTG_ATTRIBUTES_HNP_MASK                           0x02
 #define USB_DESCRIPTOR_OTG_ATTRIBUTES_ADP_MASK                           0x04
 
-typedef struct _usb_language
+typedef struct
 {
     uint8_t  **string;
     uint32_t *length;
     uint16_t languageId;
 } usb_language_t;
 
-typedef struct _usb_language_list
+typedef struct
 {
     uint8_t        *languageString;
     uint32_t       stringLength;
@@ -205,14 +207,14 @@ typedef struct _usb_language_list
     uint8_t        count;
 } usb_language_list_t;
 
-typedef struct _usb_descriptor_common
+typedef struct
 {
     uint8_t bLength;
     uint8_t bDescriptorType;
     uint8_t bData[1];
 } usb_descriptor_common_t;
 
-typedef struct _usb_descriptor_device
+typedef struct
 {
     uint8_t bLength;
     uint8_t bDescriptorType;
@@ -230,7 +232,7 @@ typedef struct _usb_descriptor_device
     uint8_t bNumConfigurations;
 } usb_descriptor_device_t;
 
-typedef struct _usb_descriptor_configuration
+typedef struct
 {
     uint8_t bLength;
     uint8_t bDescriptorType;
@@ -242,7 +244,7 @@ typedef struct _usb_descriptor_configuration
     uint8_t bMaxPower;
 } usb_descriptor_configuration_t;
 
-typedef struct _usb_descriptor_interface
+typedef struct
 {
     uint8_t bLength;
     uint8_t bDescriptorType;
@@ -255,7 +257,7 @@ typedef struct _usb_descriptor_interface
     uint8_t iInterface;
 } usb_descriptor_interface_t;
 
-typedef struct _usb_descriptor_endpoint
+typedef struct
 {
     uint8_t bLength;
     uint8_t bDescriptorType;
@@ -265,7 +267,7 @@ typedef struct _usb_descriptor_endpoint
     uint8_t bInterval;
 } usb_descriptor_endpoint_t;
 
-typedef union _usb_descriptor_union
+typedef union
 {
     usb_descriptor_common_t        common;
     usb_descriptor_device_t        device;

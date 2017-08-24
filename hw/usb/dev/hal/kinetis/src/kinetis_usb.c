@@ -76,17 +76,17 @@ static uint32_t g_kinetis_usb_dma_buffer[((DMA_ALIGN_LEN - 1) >> 2) + 1];
 
 static void *g_handle = NULL;
 
-static usb_status_t _kinetis_usb_send(usb_device_controller_handle handle,
+static usb_status_t _kinetis_usb_send(usb_dev_ctrl_handle handle,
                  uint8_t endpointAddress,
                  uint8_t *buffer,
                  uint32_t length);
-static usb_status_t _kinetis_usb_recv(usb_device_controller_handle khciHandle,
+static usb_status_t _kinetis_usb_recv(usb_dev_ctrl_handle khciHandle,
                  uint8_t endpointAddress,
                  uint8_t *buffer,
                  uint32_t length);
-static usb_status_t _kinetis_usb_cancel(usb_device_controller_handle khciHandle,
+static usb_status_t _kinetis_usb_cancel(usb_dev_ctrl_handle khciHandle,
                  uint8_t ep);
-static usb_status_t _kinetis_usb_control(usb_device_controller_handle handle,
+static usb_status_t _kinetis_usb_control(usb_dev_ctrl_handle handle,
                  usb_device_control_type_t type, void *param);
 
 static uint32_t
@@ -252,8 +252,7 @@ _kinetis_usb_dev_set_dflt(kinetis_usb_dev_state_t *state)
 }
 
 static usb_status_t
-_kinetis_usb_dev_ep_init(kinetis_usb_dev_state_t *state,
-                         usb_device_endpoint_init_struct_t *epInit)
+_kinetis_usb_dev_ep_init(kinetis_usb_dev_state_t *state, usb_dev_ep_init_t *epInit)
 {
     uint16_t maxPacketSize = epInit->maxPacketSize;
     uint8_t ep = USB_EP_NUMBER(epInit->endpointAddress);
@@ -661,10 +660,8 @@ _kinetis_usb_dev_stall(kinetis_usb_dev_state_t *state)
                                   USB_IN].stateUnion.stateBitField.stalled) ||
         (state->endpointState[(USB_CONTROL_ENDPOINT << 1) | USB_OUT]
          .stateUnion.stateBitField.stalled)) {
-        _kinetis_usb_dev_ep_unstall(state, USB_CONTROL_ENDPOINT |
-             (USB_IN << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT));
-        _kinetis_usb_dev_ep_unstall(state, USB_CONTROL_ENDPOINT |
-             (USB_OUT << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT));
+        _kinetis_usb_dev_ep_unstall(state, 0x80);
+        _kinetis_usb_dev_ep_unstall(state, 0);
     }
 }
 
@@ -690,7 +687,7 @@ _kinetis_usb_dev_error(kinetis_usb_dev_state_t *state)
 static usb_status_t
 _kinetis_usb_init(uint8_t controllerId,
                   usb_device_handle handle,
-                  usb_device_controller_handle *ctrl_handle)
+                  usb_dev_ctrl_handle *ctrl_handle)
 {
     kinetis_usb_dev_state_t *state;
     volatile USB_Type *regs;
@@ -744,7 +741,7 @@ _kinetis_usb_init(uint8_t controllerId,
 }
 
 static usb_status_t
-_kinetis_usb_deinit(usb_device_controller_handle handle)
+_kinetis_usb_deinit(usb_dev_ctrl_handle handle)
 {
     volatile USB_Type *regs = NULL;
 
@@ -777,7 +774,7 @@ _kinetis_usb_deinit(usb_device_controller_handle handle)
  * callback).
  */
 static usb_status_t
-_kinetis_usb_send(usb_device_controller_handle handle,
+_kinetis_usb_send(usb_dev_ctrl_handle handle,
                   uint8_t endpointAddress,
                   uint8_t *buffer,
                   uint32_t length)
@@ -832,7 +829,7 @@ _kinetis_usb_send(usb_device_controller_handle handle,
  * transfer is done (get notification through the endpoint callback).
  */
 static usb_status_t
-_kinetis_usb_recv(usb_device_controller_handle handle,
+_kinetis_usb_recv(usb_dev_ctrl_handle handle,
                   uint8_t ep,
                   uint8_t *buffer,
                   uint32_t len)
@@ -880,7 +877,7 @@ _kinetis_usb_recv(usb_device_controller_handle handle,
 }
 
 static usb_status_t
-_kinetis_usb_cancel(usb_device_controller_handle handle, uint8_t ep)
+_kinetis_usb_cancel(usb_dev_ctrl_handle handle, uint8_t ep)
 {
     kinetis_usb_dev_state_t *state = (kinetis_usb_dev_state_t *)handle;
     usb_dev_cb_msg_t msg;
@@ -900,7 +897,7 @@ _kinetis_usb_cancel(usb_device_controller_handle handle, uint8_t ep)
 }
 
 static usb_status_t
-_kinetis_usb_control(usb_device_controller_handle handle,
+_kinetis_usb_control(usb_dev_ctrl_handle handle,
                      usb_device_control_type_t type, void *param)
 {
     kinetis_usb_dev_state_t *state = NULL;
@@ -946,8 +943,7 @@ _kinetis_usb_control(usb_device_controller_handle handle,
         break;
     case USB_DEV_CTRL_EP_INIT:
         if (param) {
-            err = _kinetis_usb_dev_ep_init(state,
-                    (usb_device_endpoint_init_struct_t *) param);
+            err = _kinetis_usb_dev_ep_init(state, (usb_dev_ep_init_t *) param);
         }
         break;
     case USB_DEV_CTRL_EP_DEINIT:
@@ -969,11 +965,11 @@ _kinetis_usb_control(usb_device_controller_handle handle,
         if (param) {
             *((uint16_t *) param) =
                 (MYNEWT_VAL(USB_DEVICE_CONFIG_SELF_POWER) <<
-                 (USB_REQUEST_STANDARD_GET_STATUS_DEVICE_SELF_POWERED_SHIFT))
+                 (USB_REQ_STD_GET_STATUS_DEVICE_SELF_POWERED_SHIFT))
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)
                 | ((uint16_t)(((uint32_t)devhandle->remotewakeup)
                                     << (
-                                  USB_REQUEST_STANDARD_GET_STATUS_DEVICE_REMOTE_WARKUP_SHIFT)))
+                                  USB_REQ_STD_GET_STATUS_DEVICE_REMOTE_WARKUP_SHIFT)))
 #endif
             ;
             err = kStatus_USB_Success;
@@ -981,15 +977,13 @@ _kinetis_usb_control(usb_device_controller_handle handle,
         break;
     case USB_DEV_CTRL_GET_EP_STATUS:
         if (param) {
-            usb_device_endpoint_status_struct_t *endpointStatus =
-                (usb_device_endpoint_status_struct_t *)param;
+            usb_dev_ep_status_t *ep_status = (usb_dev_ep_status_t *)param;
 
-            if (USB_EP_NUMBER(endpointStatus->endpointAddress) <
+            if (USB_EP_NUMBER(ep_status->addr) <
                     MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS)) {
-                endpointStatus->endpointStatus = (uint16_t)(
+                ep_status->status = (uint16_t)(
                     state->endpointState[
-                        (USB_EP_NUMBER(endpointStatus->endpointAddress) << 1)
-                        | USB_EP_DIR(endpointStatus->endpointAddress)]
+                        (USB_EP_NUMBER(ep_status->addr) << 1) | USB_EP_DIR(ep_status->addr)]
                         .stateUnion.stateBitField.stalled == 1) ?
                     kUSB_DeviceEndpointStateStalled :
                     kUSB_DeviceEndpointStateIdle;
@@ -1069,7 +1063,7 @@ kinetis_usb_dev_isr(void)
         return;
     }
 
-    state = (kinetis_usb_dev_state_t *) dev->controllerHandle;
+    state = (kinetis_usb_dev_state_t *) dev->ctrl_handle;
     regs = state->registers;
 
     status = regs->ISTAT;
@@ -1156,7 +1150,7 @@ USB0_IRQHandler(void)
     kinetis_usb_dev_isr();
 }
 
-static const usb_device_controller_interface_struct_t kinetis_interface = {
+static const usb_dev_ctrl_itf_t kinetis_interface = {
     _kinetis_usb_init,
     _kinetis_usb_deinit,
     _kinetis_usb_send,
@@ -1178,7 +1172,7 @@ usb_hal_init_clocks(void)
     CLOCK_EnableUsbfs0Clock(kCLOCK_UsbSrcIrc48M, 48000000);
 }
 
-const usb_device_controller_interface_struct_t *
+const usb_dev_ctrl_itf_t *
 usb_hal_controller_interface(void)
 {
     return &kinetis_interface;

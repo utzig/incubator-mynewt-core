@@ -51,11 +51,6 @@
 
 #include "dev.h"
 
-/*!
- * @addtogroup usb_device_class_driver
- * @{
- */
-
 #define class_handle_t uint32_t
 
 typedef enum
@@ -69,7 +64,7 @@ typedef enum
     kUSB_DeviceClassTypePrinter,
     kUSB_DeviceClassTypeDfu,
     kUSB_DeviceClassTypeCcid,
-} usb_device_class_type_t;
+} usb_dev_class_type_t;
 
 typedef enum
 {
@@ -81,81 +76,58 @@ typedef enum
     kUSB_DeviceClassEventClearEndpointHalt,
 } usb_device_class_event_t;
 
-/*!
- * Define the endpoint data structure.
- */
 typedef struct
 {
-    uint8_t  endpointAddress;  /*!< Endpoint address*/
-    uint8_t  transferType;     /*!< Endpoint transfer type*/
-    uint16_t maxPacketSize;    /*!< Endpoint maximum packet size */
-} usb_device_endpoint_struct_t;
+    uint8_t  ep_addr;
+    uint8_t  transferType;
+    uint16_t maxPacketSize;
+} usb_dev_ep_t;
 
-/*!
- * Structure representing endpoints and the number of endpoints that the user wants.
- */
 typedef struct
 {
-    uint8_t                      count;     /*!< How many endpoints in current interface*/
-    usb_device_endpoint_struct_t *endpoint; /*!< Endpoint structure list*/
-} usb_device_endpoint_list_t;
+    uint8_t                      count;
+    usb_dev_ep_t                 *ep;
+} usb_dev_ep_list_t;
 
-/*!
- * Structure representing an interface.
- */
 typedef struct
 {
-    uint8_t                    alternateSetting; /*!< Alternate setting number*/
-    usb_device_endpoint_list_t endpointList;     /*!< Endpoints of the interface*/
-    void                       *classSpecific;   /*!< Class specific structure handle*/
-} usb_device_interface_struct_t;
+    uint8_t                    alternateSetting;
+    usb_dev_ep_list_t          eps;
+    void                       *classSpecific;
+} usb_dev_itf_t;
 
-/*!
- * Structure representing interface.
- */
 typedef struct
 {
-    uint8_t                       classCode;       /*!< Class code of the interface*/
-    uint8_t                       subclassCode;    /*!< Subclass code of the interface*/
-    uint8_t                       protocolCode;    /*!< Protocol code of the interface*/
-    uint8_t                       interfaceNumber; /*!< Interface number*/
-    usb_device_interface_struct_t *interface;      /*!< Interface structure list*/
-    uint8_t                       count;           /*!< Number of interfaces in the current interface*/
-} usb_device_interfaces_struct_t;
+    uint8_t                       classCode;
+    uint8_t                       subclassCode;
+    uint8_t                       protocolCode;
+    uint8_t                       itf_num;
+    usb_dev_itf_t                 *itf;
+    uint8_t                       count;
+} usb_dev_itfs_t;
 
-/*!
- * Structure representing how many interfaces in one class type.
- */
 typedef struct
 {
-    uint8_t                        count;         /*!< Number of interfaces of the class*/
-    usb_device_interfaces_struct_t *interfaces;   /*!< All interfaces*/
+    uint8_t                        count;
+    usb_dev_itfs_t                 *itfs;
 } usb_device_interface_list_t;
 
-/*!
- * Structure representing how many configurations in one class type.
- */
 typedef struct
 {
-    usb_device_interface_list_t *interfaceList;  /*!< Interfaces of the class*/
-    usb_device_class_type_t     type;            /*!< Class type*/
-    uint8_t                     configurations;  /*!< Number of configurations of the class*/
-} usb_device_class_struct_t;
+    usb_device_interface_list_t    *interfaceList;
+    usb_dev_class_type_t           type;
+    uint8_t                        configurations;
+} usb_dev_class_t;
 
-/*callback function pointer structure for application to provide class parameters*/
-typedef usb_status_t (*usb_device_class_callback_t)(class_handle_t classHandle,
-                                                    uint32_t callbackEvent,
-                                                    void *eventParam);
+typedef usb_status_t (*usb_dev_class_cb_fn)(class_handle_t classHandle,
+                                            uint32_t callbackEvent,
+                                            void *eventParam);
 
-/*!
- * Structure representing the device class information. This structure only can be stored in RAM space.
- */
 typedef struct
 {
-    usb_device_class_callback_t classCallback;    /*!< Class callback function to handle the device status-related event
-                                                       for the specified type of class*/
-    class_handle_t              classHandle;      /*!< The class handle of the class, filled by the common driver.*/
-    usb_device_class_struct_t   *classInfomation; /*!< Detailed information of the class*/
+    usb_dev_class_cb_fn    cb;
+    class_handle_t         handle;
+    usb_dev_class_t        *info;
 } usb_dev_class_config_t;
 
 /*!
@@ -163,10 +135,10 @@ typedef struct
  */
 typedef struct
 {
-    usb_dev_class_config_t *config;                  /*!< Array of class configuration structures */
-    usb_device_callback_t            deviceCallback; /*!< Device callback function */
-    uint8_t                          count;          /*!< Number of class supported */
-} usb_device_class_config_list_struct_t;
+    usb_dev_class_config_t    *config;
+    usb_device_callback_t     deviceCallback;
+    uint8_t                   count;
+} usb_dev_class_configs_t;
 
 /*!
  * @brief Obtains the control request structure.
@@ -199,183 +171,122 @@ typedef struct
  */
 typedef struct
 {
-    usb_setup_struct_t *setup; /*!< The pointer of the setup packet data. */
-    uint8_t            *buffer; /*!< Pass the buffer address. */
-    uint32_t           length; /*!< Pass the buffer length or requested length. */
-    uint8_t            isSetup; /*!< Indicates whether a setup packet is received. */
+    usb_setup_struct_t *setup;
+    uint8_t            *buffer;
+    uint32_t           length;
+    uint8_t            isSetup;
 } usb_device_control_request_struct_t;
 
-/*! @brief Obtains the control get descriptor request common structure. */
 typedef struct
 {
-    uint8_t  *buffer; /*!< Pass the buffer address. */
-    uint32_t length; /*!< Pass the buffer length. */
+    uint8_t  *buffer;
+    uint32_t length;
 } usb_device_get_descriptor_common_struct_t;
 
-/*! @brief Obtains the control get device descriptor request structure. */
 typedef struct
 {
-    uint8_t  *buffer; /*!< Pass the buffer address. */
-    uint32_t length; /*!< Pass the buffer length. */
+    uint8_t  *buffer;
+    uint32_t length;
 } usb_device_get_device_descriptor_struct_t;
 
-/*! @brief Obtains the control get device qualifier descriptor request structure. */
 typedef struct
 {
-    uint8_t  *buffer; /*!< Pass the buffer address. */
-    uint32_t length; /*!< Pass the buffer length. */
+    uint8_t  *buffer;
+    uint32_t length;
 } usb_device_get_device_qualifier_descriptor_struct_t;
 
-/*! @brief Obtains the control get configuration descriptor request structure. */
 typedef struct
 {
-    uint8_t  *buffer;      /*!< Pass the buffer address. */
-    uint32_t length;       /*!< Pass the buffer length. */
-    uint8_t  configuration; /*!< The configuration number. */
+    uint8_t  *buffer;
+    uint32_t length;
+    uint8_t  configuration;
 } usb_device_get_configuration_descriptor_struct_t;
 
-/*! @brief Obtains the control get string descriptor request structure. */
 typedef struct
 {
-    uint8_t  *buffer;    /*!< Pass the buffer address. */
-    uint32_t length;     /*!< Pass the buffer length. */
-    uint16_t languageId; /*!< Language ID. */
-    uint8_t  stringIndex; /*!< String index. */
+    uint8_t  *buffer;
+    uint32_t length;
+    uint16_t languageId;
+    uint8_t  stringIndex;
 } usb_device_get_string_descriptor_struct_t;
 
-/*! @brief Obtains the control get HID descriptor request structure. */
 typedef struct
 {
-    uint8_t  *buffer;        /*!< Pass the buffer address. */
-    uint32_t length;         /*!< Pass the buffer length. */
-    uint8_t  interfaceNumber; /*!< The interface number. */
+    uint8_t  *buffer;
+    uint32_t length;
+    uint8_t  interfaceNumber;
 } usb_device_get_hid_descriptor_struct_t;
 
-/*! @brief Obtains the control get HID report descriptor request structure. */
 typedef struct
 {
-    uint8_t  *buffer;        /*!< Pass the buffer address. */
-    uint32_t length;         /*!< Pass the buffer length. */
-    uint8_t  interfaceNumber; /*!< The interface number. */
+    uint8_t  *buffer;
+    uint32_t length;
+    uint8_t  interfaceNumber;
 } usb_device_get_hid_report_descriptor_struct_t;
 
-/*! @brief Obtains the control get HID physical descriptor request structure. */
 typedef struct
 {
-    uint8_t  *buffer;        /*!< Pass the buffer address. */
-    uint32_t length;         /*!< Pass the buffer length. */
-    uint8_t  index;          /*!< Physical index */
-    uint8_t  interfaceNumber; /*!< The interface number. */
+    uint8_t  *buffer;
+    uint32_t length;
+    uint8_t  index;
+    uint8_t  interfaceNumber;
 } usb_device_get_hid_physical_descriptor_struct_t;
 
-/*! @brief Obtains the control get descriptor request common union. */
 typedef union
 {
-    usb_device_get_descriptor_common_struct_t commonDescriptor; /*!< Common structure. */
-    usb_device_get_device_descriptor_struct_t deviceDescriptor; /*!< The structure to get device descriptor. */
+    usb_device_get_descriptor_common_struct_t commonDescriptor;
+    usb_device_get_device_descriptor_struct_t deviceDescriptor;
     usb_device_get_device_qualifier_descriptor_struct_t
-                                              deviceQualifierDescriptor; /*!< The structure to get device qualifier descriptor. */
+                                              deviceQualifierDescriptor;
     usb_device_get_configuration_descriptor_struct_t
-                                              configurationDescriptor; /*!< The structure to get configuration descriptor. */
-    usb_device_get_string_descriptor_struct_t stringDescriptor; /*!< The structure to get string descriptor. */
-    usb_device_get_hid_descriptor_struct_t    hidDescriptor;    /*!< The structure to get HID descriptor. */
+                                              configurationDescriptor;
+    usb_device_get_string_descriptor_struct_t stringDescriptor;
+    usb_device_get_hid_descriptor_struct_t    hidDescriptor;
     usb_device_get_hid_report_descriptor_struct_t
-                                              hidReportDescriptor; /*!< The structure to get HID report descriptor. */
+                                              hidReportDescriptor;
     usb_device_get_hid_physical_descriptor_struct_t
-                                              hidPhysicalDescriptor; /*!< The structure to get HID physical descriptor. */
+                                              hidPhysicalDescriptor;
 } usb_device_get_descriptor_common_union_t;
 
-typedef usb_status_t (*usb_device_class_init_call_t)(uint8_t controllerId,
-                                                     usb_dev_class_config_t
-                                                     *classConfig,
-                                                     class_handle_t *
-                                                     classHandle);
-typedef usb_status_t (*usb_device_class_deinit_call_t)(class_handle_t handle);
-typedef usb_status_t (*usb_device_class_event_callback_t)(void *classHandle,
-                                                          uint32_t event,
-                                                          void *param);
+typedef usb_status_t (*usb_dev_class_init_fn)(uint8_t ctrl_id,
+        usb_dev_class_config_t *config, class_handle_t *handle);
+
+typedef usb_status_t (*usb_dev_class_deinit_fn)(class_handle_t handle);
+
+typedef usb_status_t (*usb_dev_class_event_fn)(void *classHandle,
+        uint32_t event, void *param);
 
 typedef struct
 {
-    usb_device_class_init_call_t       init;
-    usb_device_class_deinit_call_t     deinit;
-    usb_device_class_event_callback_t  cb;
-    usb_device_class_type_t            type;
+    usb_dev_class_init_fn           init;
+    usb_dev_class_deinit_fn         deinit;
+    usb_dev_class_event_fn          cb;
+    usb_dev_class_type_t            type;
 } usb_device_class_map_t;
 
 typedef struct
 {
-    usb_device_handle                     handle;
-    usb_device_class_config_list_struct_t *configList;
-    uint8_t                               setupBuffer[USB_SETUP_PACKET_SIZE];
-    uint16_t                              standardTranscationBuffer;
-    uint8_t controllerId;
+    usb_device_handle               handle;
+    usb_dev_class_configs_t         *configs;
+    uint8_t                         setupBuffer[USB_SETUP_PACKET_SIZE];
+    uint16_t                        std_transact_buf;
+    uint8_t                         ctrl_id;
 } usb_device_common_class_t;
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-/*!
- * This function is used to initialize the common class and the supported classes.
- *
- * @param[in] controllerId   The controller ID of the USB IP. See the enumeration #usb_controller_index_t.
- * @param[in] configList     The class configurations. The pointer must point to the global variable.
- *                           See the structure #usb_device_class_config_list_struct_t.
- * @param[out] handle        A parameter used to return pointer of the device handle to the caller.
- *                           The value of the parameter is a pointer to the device handle. This design is used to
- *                           make a simple device align with the composite device. For the composite device, there are
- * many
- *                           kinds of class handles. However, there is only one device handle. Therefore, the handle
- * points to
- *                           a device instead of a class. The class handle can be received from the
- *                           #usb_dev_class_config_t::classHandle after the the function successfully.
- */
-usb_status_t usb_device_class_init(uint8_t controllerId,
-                                   usb_device_class_config_list_struct_t *configList,
-                                   usb_device_handle *handle);
-
-/*!
- * This function is used to deinitialize the common class and the supported classes.
- *
- * @param[in] controllerId   The controller ID of the USB IP. See the enumeration #usb_controller_index_t.
- */
-usb_status_t usb_device_class_deinit(uint8_t controllerId);
-
-/*!
- * This function is used to get the USB bus speed.
- *
- * @param[in] controllerId   The controller ID of the USB IP. See the enumeration #usb_controller_index_t.
- * @param[out] speed           It is an OUT parameter, which returns the current speed of the controller.
- */
-usb_status_t usb_device_class_get_speed(uint8_t controllerId, uint8_t *speed);
-
-/*!
- * This function handles the event passed to the class drivers.
- *
- * @param[in] event           The event codes. See the enumeration #usb_device_class_event_t.
- * @param[in,out] param           The parameter type is determined by the event code.
- */
+usb_status_t usb_device_class_init(uint8_t ctrl_id,
+        usb_dev_class_configs_t *configs, usb_device_handle *handle);
+usb_status_t usb_device_class_deinit(uint8_t ctrl_id);
+usb_status_t usb_device_class_get_speed(uint8_t ctrl_id, uint8_t *speed);
 usb_status_t usb_device_class_event(usb_device_handle handle,
-                                    usb_device_class_event_t event, void *param);
-
-/*!
- * This function handles the common class callback.
- *
- * @param[in] event           The event codes. See the enumeration #usb_device_event_t.
- * @param[in,out] param       The parameter type is determined by the event code.
- */
+        usb_device_class_event_t event, void *param);
 usb_status_t usb_device_class_cb(usb_device_handle handle, uint32_t event,
-                                 void *param);
-
-/*!
- * This function gets the device handle according to the controller ID.
- *
- * @param[in] controllerId   The controller ID of the USB IP. See the enumeration #usb_controller_index_t.
- * @param[out] handle          An out parameter used to return the pointer of the device handle to the caller.
- */
-usb_status_t usb_device_class_get_handle(uint8_t controllerId,
-                                         usb_device_handle *handle);
+        void *param);
+usb_status_t usb_device_class_get_handle(uint8_t ctrl_id,
+        usb_device_handle *handle);
 
 #if defined(__cplusplus)
 }

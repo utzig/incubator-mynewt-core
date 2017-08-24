@@ -129,9 +129,9 @@ typedef struct _usb_device_endpoint_callback_message_struct
  * result is. his callback pointer is passed when a specified endpoint is
  * initialized by calling API #USB_DeviceInitEndpoint.
  */
-typedef usb_status_t (*usb_device_endpoint_callback_t)(usb_device_handle handle,
-                                                       usb_dev_ep_cb_msg_t *msg,
-                                                       void *callbackParam);
+typedef usb_status_t (*usb_dev_ep_cb_fn)(usb_device_handle handle,
+                                         usb_dev_ep_cb_msg_t *msg,
+                                         void *param);
 
 /*
  * This callback function is used to notify the upper layer that the device
@@ -141,28 +141,28 @@ typedef usb_status_t (*usb_device_callback_t)(usb_device_handle handle,
                                               uint32_t callbackEvent,
                                               void *eventParam);
 
-typedef struct _usb_device_endpoint_callback_struct
+typedef struct
 {
-    usb_device_endpoint_callback_t callbackFn;
-    void                           *callbackParam;
-    uint8_t                        isBusy;
-} usb_device_endpoint_callback_struct_t;
+    usb_dev_ep_cb_fn               fn;
+    void                           *param;
+    uint8_t                        busy;
+} usb_dev_ep_cb_t;
 
-typedef struct _usb_device_endpoint_init_struct
+typedef struct
 {
     uint16_t maxPacketSize;
     uint8_t  endpointAddress;
     uint8_t  transferType;
     uint8_t  zlt;
-} usb_device_endpoint_init_struct_t;
+} usb_dev_ep_init_t;
 
-typedef struct _usb_device_endpoint_status_struct
+typedef struct
 {
-    uint8_t  endpointAddress;
-    uint16_t endpointStatus;
-} usb_device_endpoint_status_struct_t;
+    uint8_t  addr;
+    uint16_t status;
+} usb_dev_ep_status_t;
 
-#define usb_device_controller_handle usb_device_handle
+#define usb_dev_ctrl_handle usb_device_handle
 
 typedef enum
 {
@@ -186,7 +186,7 @@ typedef struct
  * Device controller interface call table functions
  */
 
-typedef enum _usb_device_control_type
+typedef enum
 {
     USB_DEV_CTRL_RUN,
     USB_DEV_CTRL_STOP,
@@ -207,58 +207,46 @@ typedef enum _usb_device_control_type
     USB_DEV_CTRL_SET_TEST_MODE,
 } usb_device_control_type_t;
 
-typedef usb_status_t (*usb_device_controller_init_t)(uint8_t controllerId,
-                                                     usb_device_handle handle,
-                                                     usb_device_controller_handle
-                                                     *controllerHandle);
+typedef usb_status_t (*usb_dev_ctrl_init_fn)(
+        uint8_t ctrl_id, usb_device_handle handle, usb_dev_ctrl_handle *ctrl_handle);
 
-typedef usb_status_t (*usb_device_controller_deinit_t)(
-    usb_device_controller_handle controllerHandle);
+typedef usb_status_t (*usb_dev_ctrl_deinit_fn)(
+        usb_dev_ctrl_handle ctrl_handle);
 
-typedef usb_status_t (*usb_device_controller_send_t)(
-    usb_device_controller_handle controllerHandle,
-    uint8_t endpointAddress,
-    uint8_t *buffer,
-    uint32_t length);
+typedef usb_status_t (*usb_dev_ctrl_send_fn)(
+        usb_dev_ctrl_handle ctrl_handle, uint8_t ep_addr, uint8_t *buf, uint32_t len);
 
-typedef usb_status_t (*usb_device_controller_recv_t)(
-    usb_device_controller_handle controllerHandle,
-    uint8_t endpointAddress,
-    uint8_t *buffer,
-    uint32_t length);
+typedef usb_status_t (*usb_dev_ctrl_recv_fn)(
+        usb_dev_ctrl_handle ctrl_handle, uint8_t ep_addr, uint8_t *buf, uint32_t len);
 
-typedef usb_status_t (*usb_device_controller_cancel_t)(
-    usb_device_controller_handle controllerHandle,
-    uint8_t endpointAddress);
+typedef usb_status_t (*usb_dev_ctrl_cancel_fn)(
+        usb_dev_ctrl_handle ctrl_handle, uint8_t ep_addr);
 
-typedef usb_status_t (*usb_device_controller_control_t)(
-    usb_device_controller_handle controllerHandle,
-    usb_device_control_type_t
-    command,
-    void *param);
+typedef usb_status_t (*usb_dev_ctrl_control_fn)(
+        usb_dev_ctrl_handle ctrl_handle, usb_device_control_type_t cmd, void *param);
 
-typedef struct _usb_device_controller_interface_struct
+typedef struct
 {
-    usb_device_controller_init_t    deviceInit;
-    usb_device_controller_deinit_t  deviceDeinit;
-    usb_device_controller_send_t    deviceSend;
-    usb_device_controller_recv_t    deviceRecv;
-    usb_device_controller_cancel_t  deviceCancel;
-    usb_device_controller_control_t deviceControl;
-} usb_device_controller_interface_struct_t;
+    usb_dev_ctrl_init_fn      init;
+    usb_dev_ctrl_deinit_fn    deinit;
+    usb_dev_ctrl_send_fn      send;
+    usb_dev_ctrl_recv_fn      recv;
+    usb_dev_ctrl_cancel_fn    cancel;
+    usb_dev_ctrl_control_fn   control;
+} usb_dev_ctrl_itf_t;
 
 typedef struct
 {
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)
     volatile uint64_t                              hwTick;
 #endif
-    usb_device_controller_handle                   controllerHandle;
-    const usb_device_controller_interface_struct_t *controllerInterface;
+    usb_dev_ctrl_handle                            ctrl_handle;
+    const usb_dev_ctrl_itf_t                       *ctrl_itf;
+    uint8_t                                        controllerId;
     struct os_eventq                               *notificationQueue;
     usb_device_callback_t                          devcb;
-    usb_device_endpoint_callback_struct_t          epcbs[MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) << 1];
+    usb_dev_ep_cb_t                                epcbs[MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) << 1];
     uint8_t                                        deviceAddress;
-    uint8_t                                        controllerId;
     uint8_t                                        state;
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)
     uint8_t                                        remotewakeup;
@@ -270,9 +258,6 @@ typedef struct
 extern "C" {
 #endif
 
-/*
- * This function initializes the USB device module specified by the controllerId.
- */
 usb_status_t usb_dev_init(uint8_t controllerId,
                           usb_device_callback_t devcb,
                           usb_device_handle *handle);
@@ -284,15 +269,7 @@ usb_status_t usb_dev_init(uint8_t controllerId,
  */
 usb_status_t usb_device_run(usb_device_handle handle);
 
-/*
- * This function disables the device functionality. After this function called,
- * even if the device is detached to the host, it can't work.
- */
 usb_status_t usb_device_stop(usb_device_handle handle);
-
-/*
- * This function de-initializes the device controller specified by the handle.
- */
 usb_status_t usb_device_deinit(usb_device_handle handle);
 
 /*!
@@ -311,9 +288,9 @@ usb_status_t usb_device_deinit(usb_device_handle handle);
  * transfer is done (get notification through the endpoint callback).
  */
 usb_status_t usb_device_send_req(usb_device_handle handle,
-                                 uint8_t endpointAddress,
-                                 uint8_t *buffer,
-                                 uint32_t length);
+                                 uint8_t ep_addr,
+                                 uint8_t *buf,
+                                 uint32_t len);
 
 /*!
  * @brief Receives data through a specified endpoint.
@@ -339,23 +316,17 @@ usb_status_t usb_device_send_req(usb_device_handle handle,
  * The subsequent transfer can begin only when the previous transfer is done (get notification through the endpoint
  * callback).
  */
-usb_status_t usb_device_recv_req(usb_device_handle handle,
-                                 uint8_t endpointAddress,
-                                 uint8_t *buffer,
-                                 uint32_t length);
+usb_status_t usb_device_recv_req(usb_device_handle handle, uint8_t ep_addr,
+                                 uint8_t *buf, uint32_t len);
 
-usb_status_t usb_device_cancel(usb_device_handle handle,
-                               uint8_t endpointAddress);
+usb_status_t usb_device_cancel(usb_device_handle handle, uint8_t ep_addr);
 
 usb_status_t usb_dev_ep_init(usb_device_handle handle,
-                             usb_device_endpoint_init_struct_t *epInit,
-                             usb_device_endpoint_callback_struct_t *epcbs);
+                             usb_dev_ep_init_t *ep_init,
+                             usb_dev_ep_cb_t *epcbs);
 
-usb_status_t usb_dev_ep_deinit(usb_device_handle handle,
-                               uint8_t endpointAddress);
-
+usb_status_t usb_dev_ep_deinit(usb_device_handle handle, uint8_t ep_addr);
 usb_status_t usb_dev_ep_stall(usb_device_handle handle, uint8_t ep_addr);
-
 usb_status_t usb_dev_ep_unstall(usb_device_handle handle, uint8_t ep_addr);
 
 usb_status_t usb_dev_get_status(usb_device_handle handle,

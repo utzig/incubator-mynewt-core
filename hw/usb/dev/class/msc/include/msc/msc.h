@@ -202,16 +202,16 @@ typedef struct
 
 typedef struct _usb_device_msc_struct
 {
-    usb_device_handle handle;                              /*!< The device handle */
-    usb_dev_class_config_t *configurationStruct; /*!< The configuration of the class*/
-    usb_device_interface_struct_t *interfaceHandle;        /*!< Current interface handle */
-    uint32_t transferRemaining;                            /*!< Transfer remaining data */
-    uint32_t currentOffset;                                /*!< Current address offset */
-    uint32_t totalLogicalBlockNumber;                      /*!< Total logical block number of device */
-    uint32_t lengthOfEachLba;                              /*!< Length of logical block */
-    uint32_t implementingDiskDrive;                        /*!< Disk drive*/
-    uint32_t bulkInBufferSize;                             /*!< Bulk in buffer size*/
-    uint32_t bulkOutBufferSize;                            /*!< Bulk out buffer size*/
+    usb_device_handle handle;
+    usb_dev_class_config_t *configurationStruct;
+    usb_dev_itf_t *interfaceHandle;
+    uint32_t transferRemaining;
+    uint32_t currentOffset;
+    uint32_t totalLogicalBlockNumber;
+    uint32_t lengthOfEachLba;
+    uint32_t implementingDiskDrive;
+    uint32_t bulkInBufferSize;
+    uint32_t bulkOutBufferSize;
 
     usb_device_msc_cbw_t *mscCbw; /*!< CBW structure */
     usb_device_msc_csw_t *mscCsw; /*!< CSW structure */

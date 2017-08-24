@@ -84,7 +84,7 @@ _stm32_usb_dev_msp_deinit(void)
 }
 
 static int
-_stm32_usb_dev_start(usb_device_controller_handle handle)
+_stm32_usb_dev_start(usb_dev_ctrl_handle handle)
 {
     stm32_usb_dev_state_t *state = NULL;
 
@@ -103,7 +103,7 @@ _stm32_usb_dev_start(usb_device_controller_handle handle)
 }
 
 static int
-_stm32_usb_dev_stop(usb_device_controller_handle handle)
+_stm32_usb_dev_stop(usb_dev_ctrl_handle handle)
 {
     stm32_usb_dev_state_t *state = (stm32_usb_dev_state_t *)handle;
 
@@ -179,6 +179,7 @@ _stm32_usb_dev_sof(stm32_usb_dev_state_t *state)
 static int
 _stm32_usb_dev_set_addr(stm32_usb_dev_state_t *state, uint8_t addr)
 {
+    //printf("set addr = 0x%02x\n", addr);
     __HAL_LOCK(state);
     USB_SetDevAddress(state->Instance, addr);
     __HAL_UNLOCK(state);
@@ -186,8 +187,7 @@ _stm32_usb_dev_set_addr(stm32_usb_dev_state_t *state, uint8_t addr)
 }
 
 static int
-_stm32_usb_dev_ep_init(stm32_usb_dev_state_t *state,
-                       usb_device_endpoint_init_struct_t *epInit)
+_stm32_usb_dev_ep_init(stm32_usb_dev_state_t *state, usb_dev_ep_init_t *epInit)
 {
     USB_OTG_EPTypeDef *ep;
     uint8_t ep_addr = epInit->endpointAddress;
@@ -236,13 +236,13 @@ _stm32_usb_dev_ep_deinit(stm32_usb_dev_state_t *state,
 
 
 static usb_status_t
-_stm32_usb_dev_recv(usb_device_controller_handle handle,
+_stm32_usb_dev_recv(usb_dev_ctrl_handle handle,
                     uint8_t ep_addr, uint8_t *buf, uint32_t len)
 {
     stm32_usb_dev_state_t *state = (stm32_usb_dev_state_t *)handle;
     USB_OTG_EPTypeDef *ep;
 
-    //printf("usb dev recv\n");
+    //printf("_stm32_usb_dev_recv\n");
 
     if (!handle) {
         return kStatus_USB_InvalidHandle;
@@ -276,7 +276,7 @@ _stm32_usb_dev_recv(usb_device_controller_handle handle,
 }
 
 static usb_status_t
-_stm32_usb_dev_send(usb_device_controller_handle handle,
+_stm32_usb_dev_send(usb_dev_ctrl_handle handle,
                     uint8_t ep_addr,
                     uint8_t *buf,
                     uint32_t len)
@@ -284,7 +284,7 @@ _stm32_usb_dev_send(usb_device_controller_handle handle,
     stm32_usb_dev_state_t *state = (stm32_usb_dev_state_t *)handle;
     USB_OTG_EPTypeDef *ep;
 
-    //printf("usb dev send\n");
+    //printf("_stm32_usb_dev_send, ep=%d, len=%ld\n", ep_addr, len);
 
     if (!handle) {
         return kStatus_USB_InvalidHandle;
@@ -293,8 +293,6 @@ _stm32_usb_dev_send(usb_device_controller_handle handle,
     if (!buf) {
         return kStatus_USB_InvalidParameter;
     }
-
-    //printf("usb dev send 2\n");
 
     ep = &state->IN_ep[ep_addr & 0x7f];
 
@@ -309,6 +307,7 @@ _stm32_usb_dev_send(usb_device_controller_handle handle,
     }
 
     if (!(ep_addr & 0x7F)) {
+        //printf("USB_EP0StartXfer\n");
         USB_EP0StartXfer(state->Instance, ep, state->Init.dma_enable);
     } else {
         USB_EPStartXfer(state->Instance, ep, state->Init.dma_enable);
@@ -371,7 +370,7 @@ _stm32_usb_dev_ep_unstall(stm32_usb_dev_state_t *state, uint8_t ep_addr)
 }
 
 static usb_status_t
-_stm32_usb_dev_deinit(usb_device_controller_handle handle)
+_stm32_usb_dev_deinit(usb_dev_ctrl_handle handle)
 {
     if (!handle) {
         return kStatus_USB_InvalidHandle;
@@ -393,7 +392,7 @@ _stm32_usb_dev_deinit(usb_device_controller_handle handle)
  * The function is used to cancel the pending transfer in a specified endpoint.
  */
 static usb_status_t
-_stm32_usb_dev_cancel(usb_device_controller_handle handle, uint8_t ep)
+_stm32_usb_dev_cancel(usb_dev_ctrl_handle handle, uint8_t ep)
 {
     stm32_usb_dev_state_t *state = NULL;
     //usb_dev_cb_msg_t msg;
@@ -432,8 +431,8 @@ _stm32_usb_dev_cancel(usb_device_controller_handle handle, uint8_t ep)
 }
 
 static usb_status_t
-_stm32_usb_dev_control(usb_device_controller_handle handle,
-                      usb_device_control_type_t type, void *param)
+_stm32_usb_dev_control(usb_dev_ctrl_handle handle,
+                       usb_device_control_type_t type, void *param)
 {
     stm32_usb_dev_state_t *state = NULL;
     usb_status_t error = kStatus_USB_Success;
@@ -461,8 +460,7 @@ _stm32_usb_dev_control(usb_device_controller_handle handle,
         break;
     case USB_DEV_CTRL_EP_INIT:
         if (param) {
-            error = _stm32_usb_dev_ep_init(state,
-                        (usb_device_endpoint_init_struct_t *) param);
+            error = _stm32_usb_dev_ep_init(state, (usb_dev_ep_init_t *) param);
         }
         break;
     case USB_DEV_CTRL_EP_DEINIT:
@@ -484,11 +482,11 @@ _stm32_usb_dev_control(usb_device_controller_handle handle,
         if (param) {
             *((uint16_t *)param) =
                 (MYNEWT_VAL(USB_DEVICE_CONFIG_SELF_POWER) <<
-                 (USB_REQUEST_STANDARD_GET_STATUS_DEVICE_SELF_POWERED_SHIFT))
+                 (USB_REQ_STD_GET_STATUS_DEVICE_SELF_POWERED_SHIFT))
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)
                 | ((uint16_t)(((uint32_t)deviceHandle->remotewakeup)
                                     << (
-                                  USB_REQUEST_STANDARD_GET_STATUS_DEVICE_REMOTE_WARKUP_SHIFT)))
+                                  USB_REQ_STD_GET_STATUS_DEVICE_REMOTE_WARKUP_SHIFT)))
 #endif
             ;
             error = kStatus_USB_Success;
@@ -496,27 +494,26 @@ _stm32_usb_dev_control(usb_device_controller_handle handle,
         break;
     case USB_DEV_CTRL_GET_EP_STATUS:
         if (param) {
-            usb_device_endpoint_status_struct_t *endpointStatus =
-                (usb_device_endpoint_status_struct_t *)param;
+            usb_dev_ep_status_t *ep_status = (usb_dev_ep_status_t *)param;
 
-            if (USB_EP_NUMBER(endpointStatus->endpointAddress) < MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS)) {
+            if (USB_EP_NUMBER(ep_status->addr) < MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS)) {
 #if 0 //TODO
-                endpointStatus->endpointStatus = (uint16_t)(
+                ep_status->status = (uint16_t)(
                     state->ep_state[
-                        (USB_EP_NUMBER(endpointStatus->endpointAddress) << 1)
-                        | USB_EP_DIR(endpointStatus->endpointAddress)]
+                        (USB_EP_NUMBER(ep_status->addr) << 1)
+                        | USB_EP_DIR(ep_status->addr)]
                         .stateUnion.stateBitField.stalled == 1) ?
                     kUSB_DeviceEndpointStateStalled :
                     kUSB_DeviceEndpointStateIdle;
 #endif
-                endpointStatus->endpointStatus = kUSB_DeviceEndpointStateIdle;
+                ep_status->status = kUSB_DeviceEndpointStateIdle;
                 error = kStatus_USB_Success;
             }
         }
         break;
     case USB_DEV_CTRL_SET_ADDR:
         if (param) {
-            _stm32_usb_dev_set_addr(state, *((uint8_t *)param));
+            error = _stm32_usb_dev_set_addr(state, *((uint8_t *)param));
         }
         break;
     case USB_DEV_CTRL_GET_SYNCF:
@@ -647,7 +644,7 @@ static void SystemClock_Config(void)
 static usb_status_t
 _stm32_usb_dev_init(uint8_t controllerId,
                     usb_device_handle handle,
-                    usb_device_controller_handle *ctrl_handle)
+                    usb_dev_ctrl_handle *ctrl_handle)
 {
     int i = 0;
     stm32_usb_dev_state_t *state = NULL;
@@ -690,7 +687,8 @@ _stm32_usb_dev_init(uint8_t controllerId,
     instance->GUSBCFG |= USB_OTG_GUSBCFG_PHYSEL;
 
     /* Reset after a PHY select and set Host mode */
-    printf("Core Reset = %d\n", USB_CoreReset(instance));
+    //FIXME: this was copy/pasted, error checking BAD
+    USB_CoreReset(instance);
 
     /* Deactivate the power down*/
     instance->GCCFG = USB_OTG_GCCFG_PWRDWN;
@@ -747,7 +745,7 @@ _stm32_usb_dev_init(uint8_t controllerId,
     return 0;
 }
 
-static const usb_device_controller_interface_struct_t stm32_usb_interface = {
+static const usb_dev_ctrl_itf_t stm32_usb_interface = {
     _stm32_usb_dev_init,
     _stm32_usb_dev_deinit,
     _stm32_usb_dev_send,
@@ -770,6 +768,8 @@ _write_empty_tx_fifo(stm32_usb_dev_state_t *state, uint32_t epnum)
     int32_t len = 0;
     uint32_t len32b;
     uint32_t fifoemptymsk = 0;
+
+    printf("_write_empty_tx_fifo\n");
 
     ep = &state->IN_ep[epnum];
     len = ep->xfer_len - ep->xfer_count;
@@ -856,6 +856,13 @@ stm32_usb_dev_isr(void)
                         }
 
                         /* TODO: data out stage callback */
+                        printf("isr - data out\n");
+                        msg.len = usb->OUT_ep[epnum].xfer_len;
+                        msg.buf = usb->OUT_ep[epnum].xfer_buff;
+                        msg.isSetup = 0;
+                        msg.code = epnum;
+                        usb_dev_notify(usb->dev, &msg);
+
                         if (usb->Init.dma_enable == 1) {
                             if (!epnum && !usb->OUT_ep[epnum].xfer_len) {
                                 /* this is ZLP, so prepare EP0 for next setup */
@@ -866,7 +873,18 @@ stm32_usb_dev_isr(void)
 
                     if (epint & USB_OTG_DOEPINT_STUP) {
                         /* Inform the upper layer that a setup packet is available */
+
                         /* TODO: setup stage callback */
+                        //printf("isr - setup\n");
+                        msg.len = 8;
+                        msg.buf = (uint8_t *)usb->Setup;
+                        msg.isSetup = 1;
+                        //usb->dev->isResetting = 1;
+                        msg.code = epnum;
+                        //printf("isr - len=%ld\n", msg.len);
+                        //TODO: point buf to Setup ?
+                        usb_dev_notify(usb->dev, &msg);
+
                         CLEAR_OUT_EP_INTR(epnum, USB_OTG_DOEPINT_STUP);
                     }
 
@@ -906,6 +924,7 @@ stm32_usb_dev_isr(void)
                         }
 
                         /* TODO: data in stage callback */
+                        printf("isr - data in\n");
 
                         if (usb->Init.dma_enable == 1) {
                             /* this is ZLP, so prepare EP0 for next setup */
@@ -947,6 +966,7 @@ stm32_usb_dev_isr(void)
                 usb->LPM_State = LPM_L0;
                 //FIXME: HAL_PCDEx_LPM_Callback(usb, PCD_LPM_L0_ACTIVE);
             } else {
+                printf("isr - resume\n");
                 _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyResume);
                 usb_dev_notify(usb->dev, &msg);
             }
@@ -956,6 +976,7 @@ stm32_usb_dev_isr(void)
         /* Handle Suspend Interrupt */
         if (USB_ReadInterrupts(usb->Instance) & USB_OTG_GINTSTS_USBSUSP) {
             if (USBx_DEVICE->DSTS & USB_OTG_DSTS_SUSPSTS) {
+                //printf("isr - suspend\n");
                 _init_cb_msg_with_code(&msg, kUSB_DeviceNotifySuspend);
                 usb_dev_notify(usb->dev, &msg);
             }
@@ -965,6 +986,7 @@ stm32_usb_dev_isr(void)
         /* Handle LPM Interrupt */
         if (USB_ReadInterrupts(usb->Instance) & USB_OTG_GINTSTS_LPMINT) {
             usb->Instance->GINTSTS = USB_OTG_GINTSTS_LPMINT;
+#if 0
             if (usb->LPM_State == LPM_L0) {
                 usb->LPM_State = LPM_L1;
                 usb->BESL = (usb->Instance->GLPMCFG & USB_OTG_GLPMCFG_BESL) >> 2;
@@ -972,6 +994,7 @@ stm32_usb_dev_isr(void)
             } else {
                 /* TODO: trigger suspend callback */
             }
+#endif
         }
 
         /* Handle Reset Interrupt */
@@ -999,6 +1022,10 @@ stm32_usb_dev_isr(void)
 
             /* setup EP0 to receive SETUP packets */
             USB_EP0_OutStart(usb->Instance, usb->Init.dma_enable, (uint8_t *)usb->Setup);
+            //printf("isr - reset\n");
+
+            _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyBusReset);
+            usb_dev_notify(usb->dev, &msg);
 
             usb->Instance->GINTSTS = USB_OTG_GINTSTS_USBRST;
         }
@@ -1050,8 +1077,9 @@ stm32_usb_dev_isr(void)
                 }
             }
 
-            _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyBusReset);
-            usb_dev_notify(usb->dev, &msg);
+            //printf("isr - enumeration done\n");
+            //_init_cb_msg_with_code(&msg, kUSB_DeviceNotifyBusReset);
+            //usb_dev_notify(usb->dev, &msg);
 
             usb->Instance->GINTSTS = USB_OTG_GINTSTS_ENUMDNE;
         }
@@ -1095,6 +1123,7 @@ stm32_usb_dev_isr(void)
 
         /* Handle Connection event Interrupt */
         if (USB_ReadInterrupts(usb->Instance) & USB_OTG_GINTSTS_SRQINT) {
+            //printf("isr - attach\n");
             _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyAttach);
             usb_dev_notify(usb->dev, &msg);
             usb->Instance->GINTSTS = USB_OTG_GINTSTS_SRQINT;
@@ -1105,6 +1134,7 @@ stm32_usb_dev_isr(void)
             temp = usb->Instance->GOTGINT;
 
             if (temp & USB_OTG_GOTGINT_SEDET) {
+                printf("isr - detach\n");
                 _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyDetach);
                 usb_dev_notify(usb->dev, &msg);
             }
@@ -1119,7 +1149,7 @@ usb_hal_init_clocks(void)
     //TODO
 }
 
-const usb_device_controller_interface_struct_t *
+const usb_dev_ctrl_itf_t *
 usb_hal_controller_interface(void)
 {
     return &stm32_usb_interface;

@@ -125,22 +125,22 @@ static usb_status_t usb_dev_hid_cb(class_handle_t handle, uint32_t event, void *
 static uint32_t s_GenericBuffer0[USB_HID_GENERIC_IN_BUFFER_LENGTH >> 2];
 static uint32_t s_GenericBuffer1[USB_HID_GENERIC_IN_BUFFER_LENGTH >> 2];
 usb_hid_generic_struct_t g_UsbDeviceHidGeneric;
-extern usb_device_class_struct_t g_UsbDeviceHidGenericConfig;
+extern usb_dev_class_t g_UsbDeviceHidGenericConfig;
 
-usb_device_endpoint_struct_t g_UsbDeviceHidGenericEndpoints[USB_HID_GENERIC_ENDPOINT_COUNT] = {
+usb_dev_ep_t g_UsbDeviceHidGenericEndpoints[USB_HID_GENERIC_ENDPOINT_COUNT] = {
     {
-        USB_HID_GENERIC_ENDPOINT_IN | (USB_IN << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT),
+        USB_HID_GENERIC_ENDPOINT_IN | 0x80,
         USB_ENDPOINT_INTERRUPT,
         FS_HID_GENERIC_INTERRUPT_IN_PACKET_SIZE,
     },
     {
-        USB_HID_GENERIC_ENDPOINT_OUT | (USB_OUT << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT),
+        USB_HID_GENERIC_ENDPOINT_OUT,
         USB_ENDPOINT_INTERRUPT,
         FS_HID_GENERIC_INTERRUPT_OUT_PACKET_SIZE,
     }
 };
 
-usb_device_interface_struct_t g_UsbDeviceHidGenericInterface[] = {
+usb_dev_itf_t g_UsbDeviceHidGenericInterface[] = {
     {
         0,
         {
@@ -150,14 +150,14 @@ usb_device_interface_struct_t g_UsbDeviceHidGenericInterface[] = {
         NULL,
 }};
 
-usb_device_interfaces_struct_t g_UsbDeviceHidGenericInterfaces[USB_HID_GENERIC_INTERFACE_COUNT] = {
+usb_dev_itfs_t g_UsbDeviceHidGenericInterfaces[USB_HID_GENERIC_INTERFACE_COUNT] = {
     {
         USB_HID_GENERIC_CLASS,
         USB_HID_GENERIC_SUBCLASS,
         USB_HID_GENERIC_PROTOCOL,
         USB_HID_GENERIC_INTERFACE_INDEX,
         g_UsbDeviceHidGenericInterface,
-        sizeof(g_UsbDeviceHidGenericInterface) / sizeof(usb_device_interfaces_struct_t),
+        sizeof(g_UsbDeviceHidGenericInterface) / sizeof(usb_dev_itfs_t),
     },
 };
 
@@ -168,7 +168,7 @@ usb_device_interface_list_t g_UsbDeviceHidGenericInterfaceList[USB_DEVICE_CONFIG
     },
 };
 
-usb_device_class_struct_t g_UsbDeviceHidGenericConfig = {
+usb_dev_class_t g_UsbDeviceHidGenericConfig = {
     g_UsbDeviceHidGenericInterfaceList,
     kUSB_DeviceClassTypeHid,
     USB_DEVICE_CONFIGURATION_COUNT,
@@ -224,14 +224,14 @@ uint8_t g_UsbDeviceConfigurationDescriptor[USB_DESCRIPTOR_LENGTH_CONFIGURATION_A
     USB_SHORT_GET_HIGH(USB_DESCRIPTOR_LENGTH_HID_GENERIC_REPORT),
     USB_DESCRIPTOR_LENGTH_ENDPOINT,
     USB_DESCRIPTOR_TYPE_ENDPOINT,
-    USB_HID_GENERIC_ENDPOINT_IN | (USB_IN << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT),
+    USB_HID_GENERIC_ENDPOINT_IN | 0x80,
     USB_ENDPOINT_INTERRUPT,
     USB_SHORT_GET_LOW(FS_HID_GENERIC_INTERRUPT_IN_PACKET_SIZE),
     USB_SHORT_GET_HIGH(FS_HID_GENERIC_INTERRUPT_IN_PACKET_SIZE),
     FS_HID_GENERIC_INTERRUPT_IN_INTERVAL,
     USB_DESCRIPTOR_LENGTH_ENDPOINT,
     USB_DESCRIPTOR_TYPE_ENDPOINT,
-    USB_HID_GENERIC_ENDPOINT_OUT | (USB_OUT << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT),
+    USB_HID_GENERIC_ENDPOINT_OUT,
     USB_ENDPOINT_INTERRUPT,
     USB_SHORT_GET_LOW(FS_HID_GENERIC_INTERRUPT_OUT_PACKET_SIZE),
     USB_SHORT_GET_HIGH(FS_HID_GENERIC_INTERRUPT_OUT_PACKET_SIZE),
@@ -394,7 +394,7 @@ usb_dev_class_config_t g_UsbDeviceHidConfig[] = {
     },
 };
 
-static usb_device_class_config_list_struct_t g_UsbDeviceHidConfigList = {
+static usb_dev_class_configs_t g_UsbDeviceHidConfigList = {
     g_UsbDeviceHidConfig,
     usb_dev_cb,
     1,
@@ -549,7 +549,7 @@ usb_device_application_init(void)
 
     status = usb_device_class_init(CONTROLLER_ID, &g_UsbDeviceHidConfigList, &g_UsbDeviceHidGeneric.deviceHandle);
     if (status == kStatus_USB_Success) {
-        g_UsbDeviceHidGeneric.hidHandle = g_UsbDeviceHidConfigList.config->classHandle;
+        g_UsbDeviceHidGeneric.hidHandle = g_UsbDeviceHidConfigList.config->handle;
     } else {
         return;
     }

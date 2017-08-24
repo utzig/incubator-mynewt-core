@@ -90,25 +90,25 @@ typedef enum _usb_device_hid_event
  */
 typedef struct
 {
-    uint8_t *reportBuffer; /*!< The report buffer address */
-    uint32_t reportLength; /*!< The report data length */
-    uint8_t reportType;    /*!< The report type */
-    uint8_t reportId;      /*!< The report ID */
+    uint8_t *reportBuffer;
+    uint32_t reportLength;
+    uint8_t reportType;
+    uint8_t reportId;
 } usb_device_hid_report_struct_t;
 
 typedef struct
 {
-    usb_device_handle handle;                       /*!< The device handle */
-    usb_dev_class_config_t *configStruct; /*!< The configuration of the class. */
-    usb_device_interface_struct_t *interfaceHandle; /*!< Current interface handle */
-    uint8_t configuration;                          /*!< Current configuration */
-    uint8_t interfaceNumber;                        /*!< The interface number of the class */
-    uint8_t alternate;                              /*!< Current alternate setting of the interface */
-    uint8_t idleRate;                               /*!< The idle rate of the HID device */
-    uint8_t protocol;                               /*!< Current protocol */
-    uint8_t interruptInPipeBusy;                    /*!< Interrupt IN pipe busy flag */
-    uint8_t interruptOutPipeBusy;                   /*!< Interrupt OUT pipe busy flag */
-} usb_device_hid_struct_t;
+    usb_device_handle handle;
+    usb_dev_class_config_t *config;
+    usb_dev_itf_t *interfaceHandle;
+    uint8_t configuration;
+    uint8_t interfaceNumber;
+    uint8_t alternate;
+    uint8_t idleRate;
+    uint8_t protocol;
+    uint8_t interruptInPipeBusy;
+    uint8_t interruptOutPipeBusy;
+} usb_dev_hid_t;
 
 #if defined(__cplusplus)
 extern "C" {

@@ -81,7 +81,7 @@ _usb_device_alloc_handle(uint8_t controllerId, usb_dev_t **dev)
 
     /* Check the controller is initialized or not. */
     for (i = 0; i < MYNEWT_VAL(USB_DEVICE_CONFIG_NUM); i++) {
-        if (s_UsbDevice[i].controllerHandle &&
+        if (s_UsbDevice[i].ctrl_handle &&
                 s_UsbDevice[i].controllerId == controllerId) {
             status = kStatus_USB_Error;
             goto done;
@@ -90,7 +90,7 @@ _usb_device_alloc_handle(uint8_t controllerId, usb_dev_t **dev)
 
     /* Get a free device handle. */
     for (i = 0; i < MYNEWT_VAL(USB_DEVICE_CONFIG_NUM); i++) {
-        if (!s_UsbDevice[i].controllerHandle) {
+        if (!s_UsbDevice[i].ctrl_handle) {
             s_UsbDevice[i].controllerId = controllerId;
             *dev = &s_UsbDevice[i];
             status = kStatus_USB_Success;
@@ -114,90 +114,60 @@ _usb_device_free_handle(usb_dev_t *dev)
     os_sr_t sr;
 
     OS_ENTER_CRITICAL(sr);
-    dev->controllerHandle = NULL;
+    dev->ctrl_handle = NULL;
     dev->controllerId = 0;
     OS_EXIT_CRITICAL(sr);
 
     return kStatus_USB_Success;
 }
 
-/*!
- * This function is used to get the controller interface handle.
- *
- * @param controllerId          The controller id of the USB IP. Please refer to the enumeration usb_controller_index_t.
- * @param controllerInterface   It is out parameter, is used to return pointer of the device controller handle to the
- * caller.
- */
-
 #if 0
 static usb_status_t
-_usb_device_get_controller_interface(uint8_t controllerId,
-                                     const usb_device_controller_interface_struct_t * *controllerInterface)
+_usb_device_get_controller_interface(uint8_t controllerId, const usb_dev_ctrl_itf_t **ctrl_itf)
 {
     return error;
 }
 #endif
 
-/*!
- * @brief Start a new transfer.
- *
- * This function is used to start a new transfer.
- *
- * @param endpointAddress       Endpoint address. Bit7 is direction, 0U - USB_OUT, 1U - USB_IN.
- * @param buffer                 The memory address to be transferred, or the memory address to hold the data need to be
- * sent.
- * @param length                 The length of the data.
- *
- * @retval kStatus_USB_Success              Get a device handle successfully.
- * @retval kStatus_USB_InvalidHandle        The device handle is invalided.
- * @retval kStatus_USB_ControllerNotFound   The controller interface is not found.
- * @retval kStatus_USB_Error                The device is doing reset.
- */
 static usb_status_t
-_usb_device_transfer(usb_device_handle handle,
-                     uint8_t endpointAddress,
-                     uint8_t *buffer,
-                     uint32_t length)
+_usb_device_transfer(usb_device_handle handle, uint8_t ep_addr, uint8_t *buf,
+                     uint32_t len)
 {
     usb_dev_t *dev = (usb_dev_t *)handle;
-    usb_status_t error = kStatus_USB_Error;
-    uint8_t endpoint = USB_EP_NUMBER(endpointAddress);
-    uint8_t direction = USB_EP_DIR(endpointAddress);
+    uint8_t ep = USB_EP_NUMBER(ep_addr);
+    uint8_t dir = USB_EP_DIR(ep_addr);
+    usb_status_t err = kStatus_USB_Error;
 
     if (!dev) {
         return kStatus_USB_InvalidHandle;
     }
 
-    if (dev->controllerInterface) {
-        if (dev->epcbs[(uint8_t)((uint32_t)endpoint << 1) | direction].isBusy) {
-            return kStatus_USB_Busy;
-        }
-        dev->epcbs[(uint8_t)((uint32_t)endpoint << 1) | direction].isBusy = 1;
-        if (endpointAddress & USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_MASK) {
-#if (defined(USB_DEVICE_CONFIG_BUFFER_PROPERTY_CACHEABLE) && \
-            (USB_DEVICE_CONFIG_BUFFER_PROPERTY_CACHEABLE > 0))
-            if (length) {
-                USB_CacheFlushLines((void *)buffer, length);
-            }
-#endif
-            /* Call the controller send interface. */
-            error = dev->controllerInterface->deviceSend(
-                dev->controllerHandle, endpointAddress, buffer, length);
-        } else {
-#if (defined(USB_DEVICE_CONFIG_BUFFER_PROPERTY_CACHEABLE) && \
-            (USB_DEVICE_CONFIG_BUFFER_PROPERTY_CACHEABLE > 0))
-            if (length) {
-                USB_CacheInvalidateLines((void *)buffer, length);
-            }
-#endif
-            /* Call the controller receive interface. */
-            error = dev->controllerInterface->deviceRecv(
-                dev->controllerHandle, endpointAddress, buffer, length);
-        }
-    } else {
-        error = kStatus_USB_ControllerNotFound;
+    if (!dev->ctrl_itf) {
+        return kStatus_USB_ControllerNotFound;
     }
-    return error;
+
+    if (dev->epcbs[(ep << 1) | dir].busy) {
+        return kStatus_USB_Busy;
+    }
+
+    dev->epcbs[(ep << 1) | dir].busy = 1;
+
+    if (dir) {
+#if defined(USB_DEVICE_CONFIG_BUFFER_PROPERTY_CACHEABLE)
+        if (len) {
+            USB_CacheFlushLines((void *)buf, len);
+        }
+#endif
+        err = dev->ctrl_itf->send(dev->ctrl_handle, ep_addr, buf, len);
+    } else {
+#if defined(USB_DEVICE_CONFIG_BUFFER_PROPERTY_CACHEABLE)
+        if (len) {
+            USB_CacheInvalidateLines((void *)buf, len);
+        }
+#endif
+        err = dev->ctrl_itf->recv(dev->ctrl_handle, ep_addr, buf, len);
+    }
+    return err;
 }
 
 static usb_status_t
@@ -209,11 +179,11 @@ _usb_device_control(usb_device_handle handle, usb_device_control_type_t type, vo
         return kStatus_USB_InvalidHandle;
     }
 
-    if (!dev->controllerInterface) {
+    if (!dev->ctrl_itf) {
         return kStatus_USB_ControllerNotFound;
     }
 
-    return dev->controllerInterface->deviceControl(dev->controllerHandle, type, param);
+    return dev->ctrl_itf->control(dev->ctrl_handle, type, param);
 }
 
 /*!
@@ -243,9 +213,9 @@ _usb_device_reset_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
     dev->deviceAddress = 0;
 
     for (i = 0; i < (MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) * 2); i++) {
-        dev->epcbs[i].callbackFn = NULL;
-        dev->epcbs[i].callbackParam = NULL;
-        dev->epcbs[i].isBusy = 0;
+        dev->epcbs[i].fn = NULL;
+        dev->epcbs[i].param = NULL;
+        dev->epcbs[i].busy = 0;
     }
 
     dev->devcb(dev, kUSB_DeviceEventBusReset, NULL);
@@ -326,18 +296,17 @@ _usb_device_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
     default:
         if (endpoint < MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS)) {
             epidx = (uint8_t)((uint32_t)endpoint<< 1) | direction;
-            if (dev->epcbs[epidx].callbackFn) {
+            if (dev->epcbs[epidx].fn) {
                 ep_cb_msg.buffer = msg->buf;
                 ep_cb_msg.length = msg->len;
                 ep_cb_msg.isSetup = msg->isSetup;
                 if (msg->isSetup) {
-                    dev->epcbs[0].isBusy = 0;
-                    dev->epcbs[1].isBusy = 0;
+                    dev->epcbs[0].busy = 0;
+                    dev->epcbs[1].busy = 0;
                 } else {
-                    dev->epcbs[epidx].isBusy = 0;
+                    dev->epcbs[epidx].busy = 0;
                 }
-                error = dev->epcbs[epidx].callbackFn(
-                    dev, &ep_cb_msg, dev->epcbs[epidx].callbackParam);
+                error = dev->epcbs[epidx].fn(dev, &ep_cb_msg, dev->epcbs[epidx].param);
             }
         }
         break;
@@ -415,7 +384,7 @@ usb_dev_init(uint8_t controllerId, usb_device_callback_t devcb,
     /* Allocate a device handle by using the controller id. */
     error = _usb_device_alloc_handle(controllerId, &dev);
 
-    if (error != kStatus_USB_Success) {
+    if (error) {
         return error;
     }
 
@@ -425,22 +394,18 @@ usb_dev_init(uint8_t controllerId, usb_device_callback_t devcb,
     dev->isResetting = 0;
 
     for (i = 0; i < (MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) * 2); i++) {
-        dev->epcbs[i].callbackFn = NULL;
-        dev->epcbs[i].callbackParam = NULL;
-        dev->epcbs[i].isBusy = 0;
+        dev->epcbs[i].fn = NULL;
+        dev->epcbs[i].param = NULL;
+        dev->epcbs[i].busy = 0;
     }
 
-    dev->controllerInterface = usb_hal_controller_interface();
-    if (!dev->controllerInterface) {
+    dev->ctrl_itf = usb_hal_controller_interface();
+    if (!dev->ctrl_itf) {
         _usb_device_free_handle(dev);
         return kStatus_USB_ControllerNotFound;
     }
-    if (!dev->controllerInterface->deviceInit   ||
-        !dev->controllerInterface->deviceDeinit ||
-        !dev->controllerInterface->deviceSend   ||
-        !dev->controllerInterface->deviceRecv   ||
-        !dev->controllerInterface->deviceCancel ||
-        !dev->controllerInterface->deviceControl) {
+    if (!dev->ctrl_itf->init || !dev->ctrl_itf->deinit || !dev->ctrl_itf->send ||
+        !dev->ctrl_itf->recv || !dev->ctrl_itf->cancel || !dev->ctrl_itf->control) {
         _usb_device_free_handle(dev);
         return kStatus_USB_InvalidControllerInterface;
     }
@@ -449,8 +414,7 @@ usb_dev_init(uint8_t controllerId, usb_device_callback_t devcb,
     dev->notificationQueue = &notification_queue;
 
     /* Initialize the controller */
-    error = dev->controllerInterface->deviceInit(controllerId, dev,
-                                                 &dev->controllerHandle);
+    error = dev->ctrl_itf->init(controllerId, dev, &dev->ctrl_handle);
     if (error != kStatus_USB_Success) {
         usb_device_deinit(dev);
         return error;
@@ -483,9 +447,9 @@ usb_device_deinit(usb_device_handle handle)
         return kStatus_USB_InvalidHandle;
     }
 
-    if (dev->controllerInterface) {
-        dev->controllerInterface->deviceDeinit(dev->controllerHandle);
-        dev->controllerInterface = NULL;
+    if (dev->ctrl_itf) {
+        dev->ctrl_itf->deinit(dev->ctrl_handle);
+        dev->ctrl_itf = NULL;
     }
 
     if (dev->notificationQueue) {
@@ -497,21 +461,15 @@ usb_device_deinit(usb_device_handle handle)
 }
 
 usb_status_t
-usb_device_send_req(usb_device_handle handle, uint8_t endpointAddress,
-                    uint8_t *buffer, uint32_t length)
+usb_device_send_req(usb_device_handle handle, uint8_t ep, uint8_t *buf, uint32_t len)
 {
-    return _usb_device_transfer(handle, USB_EP_NUMBER(endpointAddress) |
-            (USB_IN << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT),
-        buffer, length);
+    return _usb_device_transfer(handle, 0x80 | USB_EP_NUMBER(ep), buf, len);
 }
 
 usb_status_t
-usb_device_recv_req(usb_device_handle handle, uint8_t endpointAddress,
-                    uint8_t *buffer, uint32_t length)
+usb_device_recv_req(usb_device_handle handle, uint8_t ep, uint8_t *buf, uint32_t len)
 {
-    return _usb_device_transfer(handle, USB_EP_NUMBER(endpointAddress) |
-            (USB_OUT << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT),
-        buffer, length);
+    return _usb_device_transfer(handle, USB_EP_NUMBER(ep), buf, len);
 }
 
 usb_status_t
@@ -523,17 +481,16 @@ usb_device_cancel(usb_device_handle handle, uint8_t ep)
         return kStatus_USB_InvalidHandle;
     }
 
-    if (!dev->controllerInterface) {
+    if (!dev->ctrl_itf) {
         return kStatus_USB_ControllerNotFound;
     }
 
-    return dev->controllerInterface->deviceCancel(dev->controllerHandle, ep);
+    return dev->ctrl_itf->cancel(dev->ctrl_handle, ep);
 }
 
 usb_status_t
-usb_dev_ep_init(usb_device_handle handle,
-                usb_device_endpoint_init_struct_t *ep_init,
-                usb_device_endpoint_callback_struct_t *ep_cb)
+usb_dev_ep_init(usb_device_handle handle, usb_dev_ep_init_t *ep_init,
+                usb_dev_ep_cb_t *ep_cb)
 {
     usb_dev_t *dev = (usb_dev_t *) handle;
     uint8_t endpoint;
@@ -556,9 +513,9 @@ usb_dev_ep_init(usb_device_handle handle,
     }
 
     epidx = (uint8_t)((uint32_t)endpoint << 1) | direction;
-    dev->epcbs[epidx].callbackFn = ep_cb->callbackFn;
-    dev->epcbs[epidx].callbackParam = ep_cb->callbackParam;
-    dev->epcbs[epidx].isBusy = 0;
+    dev->epcbs[epidx].fn = ep_cb->fn;
+    dev->epcbs[epidx].param = ep_cb->param;
+    dev->epcbs[epidx].busy = 0;
 
     return _usb_device_control(handle, USB_DEV_CTRL_EP_INIT, ep_init);
 }
@@ -582,9 +539,9 @@ usb_dev_ep_deinit(usb_device_handle handle, uint8_t endpointAddress)
     }
 
     epidx = (uint8_t) ((uint32_t)endpoint << 1) | direction;
-    dev->epcbs[epidx].callbackFn = NULL;
-    dev->epcbs[epidx].callbackParam = NULL;
-    dev->epcbs[epidx].isBusy = 0;
+    dev->epcbs[epidx].fn = NULL;
+    dev->epcbs[epidx].param = NULL;
+    dev->epcbs[epidx].busy = 0;
 
     return error;
 }

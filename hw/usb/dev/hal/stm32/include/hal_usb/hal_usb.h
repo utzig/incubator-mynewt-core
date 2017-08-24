@@ -79,7 +79,7 @@ typedef struct
 } stm32_usb_dev_state_t;
 
 void usb_hal_init_clocks(void);
-const usb_device_controller_interface_struct_t * usb_hal_controller_interface(void);
+const usb_dev_ctrl_itf_t * usb_hal_controller_interface(void);
 void usb_hal_set_dev_handle(void *);
 void usb_hal_enable_irq(void);
 void usb_hal_clear_memory(void);

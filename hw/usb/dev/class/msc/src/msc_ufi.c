@@ -247,9 +247,9 @@ USB_DeviceMscUfiInquiryCommand(usb_dev_msc_t *mscHandle)
     temp.size = 0U;
     temp.buffer = NULL;
 
-    if (mscHandle->configurationStruct->classCallback) {
-        mscHandle->configurationStruct->classCallback((class_handle_t)mscHandle, kUSB_DeviceMscEventInquiry,
-                                                      (void *)&temp);
+    if (mscHandle->configurationStruct->cb) {
+        mscHandle->configurationStruct->cb((class_handle_t)mscHandle,
+                kUSB_DeviceMscEventInquiry, (void *)&temp);
     }
     ufi->thirteenCase.deviceExpectedDataLength = temp.size;
     ufi->thirteenCase.deviceExpectedDirection = USB_IN;
@@ -345,9 +345,9 @@ USB_DeviceMscUfiTestUnitReadyCommand(usb_dev_msc_t *mscHandle)
 
     error = USB_DeviceMscUfiThirteenCasesCheck(mscHandle);
 
-    if (mscHandle->configurationStruct->classCallback) {
-        mscHandle->configurationStruct->classCallback((class_handle_t)mscHandle, kUSB_DeviceMscEventTestUnitReady,
-                                                      (void *)&temp);
+    if (mscHandle->configurationStruct->cb) {
+        mscHandle->configurationStruct->cb((class_handle_t)mscHandle,
+                kUSB_DeviceMscEventTestUnitReady, (void *)&temp);
     }
     return error;
 }
@@ -376,9 +376,9 @@ USB_DeviceMscUfiModeSenseCommand(usb_dev_msc_t *mscHandle)
     temp.size = 0U;
     temp.buffer = NULL;
 
-    if (mscHandle->configurationStruct->classCallback) {
-        mscHandle->configurationStruct->classCallback((class_handle_t)mscHandle, kUSB_DeviceMscEventModeSense,
-                                                      (void *)&temp);
+    if (mscHandle->configurationStruct->cb) {
+        mscHandle->configurationStruct->cb((class_handle_t)mscHandle,
+                kUSB_DeviceMscEventModeSense, (void *)&temp);
     }
     ufi->thirteenCase.deviceExpectedDataLength = temp.size;
     ufi->thirteenCase.deviceExpectedDirection = USB_IN;
@@ -399,9 +399,9 @@ USB_DeviceMscUfiModeSelectCommand(usb_dev_msc_t *mscHandle)
     temp.cbwcb = &mscHandle->mscCbw->cbwcb[0];
     temp.buffer = NULL;
     temp.size = 0;
-    if (mscHandle->configurationStruct->classCallback) {
-        mscHandle->configurationStruct->classCallback((class_handle_t)mscHandle, kUSB_DeviceMscEventInquiry,
-                                                      (void *)&temp);
+    if (mscHandle->configurationStruct->cb) {
+        mscHandle->configurationStruct->cb((class_handle_t)mscHandle,
+                kUSB_DeviceMscEventInquiry, (void *)&temp);
     }
 
     ufi->thirteenCase.deviceExpectedDataLength = temp.size;
@@ -549,9 +549,9 @@ USB_DeviceMscUfiPreventAllowMediumCommand(usb_dev_msc_t *mscHandle)
 
     error = USB_DeviceMscUfiThirteenCasesCheck(mscHandle);
 
-    if (mscHandle->configurationStruct->classCallback) {
-        mscHandle->configurationStruct->classCallback((class_handle_t)mscHandle, kUSB_DeviceMscEventRemovalRequest,
-                                                      (void *)&temp);
+    if (mscHandle->configurationStruct->cb) {
+        mscHandle->configurationStruct->cb((class_handle_t)mscHandle,
+                kUSB_DeviceMscEventRemovalRequest, (void *)&temp);
     }
 
     return error;
@@ -573,9 +573,9 @@ USB_DeviceMscUfiSendDiagnosticCommand(usb_dev_msc_t *mscHandle)
     ufi->thirteenCase.lbaSendRecvSelect = 0;
 
     error = USB_DeviceMscUfiThirteenCasesCheck(mscHandle);
-    if (mscHandle->configurationStruct->classCallback != NULL) {
-        mscHandle->configurationStruct->classCallback((class_handle_t)mscHandle, kUSB_DeviceMscEventRemovalRequest,
-                                                      (void *)&temp);
+    if (mscHandle->configurationStruct->cb != NULL) {
+        mscHandle->configurationStruct->cb((class_handle_t)mscHandle,
+                kUSB_DeviceMscEventRemovalRequest, (void *)&temp);
     }
     return error;
 }
@@ -597,9 +597,9 @@ usb_status_t USB_DeviceMscUfiStartStopUnitCommand(usb_dev_msc_t *mscHandle)
     error = USB_DeviceMscUfiThirteenCasesCheck(mscHandle);
 
     if (mscHandle->mscCsw->cswStatus != USB_DEVICE_MSC_PHASE_ERROR) {
-        if (mscHandle->configurationStruct->classCallback) {
-            mscHandle->configurationStruct->classCallback((class_handle_t)mscHandle, kUSB_DeviceMscEventStopEjectMedia,
-                                                          (void *)&temp);
+        if (mscHandle->configurationStruct->cb) {
+            mscHandle->configurationStruct->cb((class_handle_t)mscHandle,
+                    kUSB_DeviceMscEventStopEjectMedia, (void *)&temp);
         }
     }
 

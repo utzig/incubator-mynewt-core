@@ -165,20 +165,20 @@ usb_device_mode_parameters_header_struct_t g_ModeParametersHeader = {
 static uint8_t s_StorageDisk[DISK_SIZE_NORMAL];
 usb_msc_struct_t g_msc;
 
-usb_device_endpoint_struct_t g_UsbDeviceMscEndpoints[USB_MSC_ENDPOINT_COUNT] = {
+usb_dev_ep_t g_UsbDeviceMscEndpoints[USB_MSC_ENDPOINT_COUNT] = {
     {
-        USB_MSC_BULK_IN_ENDPOINT | (USB_IN << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT),
+        USB_MSC_BULK_IN_ENDPOINT | 0x80,
         USB_ENDPOINT_BULK,
         FS_MSC_BULK_IN_PACKET_SIZE,
     },
     {
-        USB_MSC_BULK_OUT_ENDPOINT | (USB_OUT << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT),
+        USB_MSC_BULK_OUT_ENDPOINT,
         USB_ENDPOINT_BULK,
         FS_MSC_BULK_OUT_PACKET_SIZE,
     },
 };
 
-usb_device_interface_struct_t g_UsbDeviceMscInterface[] = {
+usb_dev_itf_t g_UsbDeviceMscInterface[] = {
     {
         0,
         {
@@ -189,14 +189,14 @@ usb_device_interface_struct_t g_UsbDeviceMscInterface[] = {
     },
 };
 
-usb_device_interfaces_struct_t g_UsbDeviceMscInterfaces[USB_MSC_INTERFACE_COUNT] = {
+usb_dev_itfs_t g_UsbDeviceMscInterfaces[USB_MSC_INTERFACE_COUNT] = {
     {
         USB_MSC_CLASS,
         USB_MSC_SUBCLASS,
         USB_MSC_PROTOCOL,
         USB_MSC_INTERFACE_INDEX,
         g_UsbDeviceMscInterface,
-        sizeof(g_UsbDeviceMscInterface) / sizeof(usb_device_interfaces_struct_t),
+        sizeof(g_UsbDeviceMscInterface) / sizeof(usb_dev_itfs_t),
     },
 };
 
@@ -258,7 +258,7 @@ uint8_t g_UsbDeviceConfigurationDescriptor[USB_DESCRIPTOR_LENGTH_CONFIGURATION_A
 
     USB_DESCRIPTOR_LENGTH_ENDPOINT, /* Size of this descriptor in bytes */
     USB_DESCRIPTOR_TYPE_ENDPOINT,   /* ENDPOINT Descriptor Type */
-    USB_MSC_BULK_IN_ENDPOINT | (USB_IN << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT),
+    USB_MSC_BULK_IN_ENDPOINT | 0x80,
     /* The address of the endpoint on the USB device
                              described by this descriptor. */
     USB_ENDPOINT_BULK, /* This field describes the endpoint's attributes */
@@ -269,7 +269,7 @@ uint8_t g_UsbDeviceConfigurationDescriptor[USB_DESCRIPTOR_LENGTH_CONFIGURATION_A
 
     USB_DESCRIPTOR_LENGTH_ENDPOINT, /* Size of this descriptor in bytes */
     USB_DESCRIPTOR_TYPE_ENDPOINT,   /* ENDPOINT Descriptor Type */
-    USB_MSC_BULK_OUT_ENDPOINT | (USB_OUT << USB_DESCRIPTOR_ENDPOINT_ADDRESS_DIRECTION_SHIFT),
+    USB_MSC_BULK_OUT_ENDPOINT,
     /* The address of the endpoint on the USB device
                          described by this descriptor. */
     USB_ENDPOINT_BULK, /* This field describes the endpoint's attributes */
@@ -343,7 +343,7 @@ usb_language_list_t g_UsbDeviceLanguageList = {
     USB_DEVICE_LANGUAGE_COUNT,
 };
 
-usb_device_class_struct_t g_UsbDeviceMscConfig = {
+usb_dev_class_t g_UsbDeviceMscConfig = {
     g_UsbDeviceMscInterfaceList, /* The interface list of the msc */
     kUSB_DeviceClassTypeMsc,     /* The msc class type */
     USB_CONFIGURE_COUNT,         /* The configuration count */
@@ -360,7 +360,7 @@ usb_dev_class_config_t msc_config[] = {
     },
 };
 
-static usb_device_class_config_list_struct_t msc_config_list = {
+static usb_dev_class_configs_t msc_config_list = {
     msc_config,
     usb_dev_cb,
     1,
@@ -560,7 +560,7 @@ usb_device_application_init(void)
 
     status = usb_device_class_init(CONTROLLER_ID, &msc_config_list, &g_msc.deviceHandle);
     if (status == kStatus_USB_Success) {
-        g_msc.mscHandle = msc_config_list.config->classHandle;
+        g_msc.mscHandle = msc_config_list.config->handle;
     } else {
         return;
     }
