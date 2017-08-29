@@ -55,7 +55,7 @@
 #define USB_SPEED_LOW                                                   0x01
 #define USB_SPEED_HIGH                                                  0x02
 
-typedef struct _usb_setup_struct
+typedef struct
 {
     uint8_t  bmRequestType;
     uint8_t  bRequest;

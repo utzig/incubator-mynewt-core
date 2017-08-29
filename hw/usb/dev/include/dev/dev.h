@@ -93,7 +93,7 @@ typedef enum _usb_endpoint_status
 #define USB_UNINITIALIZED_VAL_32                                0xFFFFFFFF
 
 /*! @brief Available common EVENT types in device callback */
-typedef enum _usb_device_event
+typedef enum
 {
     kUSB_DeviceEventBusReset = 1,                 /*!< USB bus reset signal detected */
     kUSB_DeviceEventSuspend,                      /*!< USB bus suspend signal detected */
@@ -117,11 +117,11 @@ typedef enum _usb_device_event
     kUSB_DeviceEventSetBHNPEnable,
 } usb_device_event_t;
 
-typedef struct _usb_device_endpoint_callback_message_struct
+typedef struct
 {
-    uint8_t  *buffer;                             /*!< Transferred buffer */
-    uint32_t length;                              /*!< Transferred data length */
-    uint8_t  isSetup;                             /*!< Is in a setup phase */
+    uint8_t  *buf;                                /*!< Transferred buffer */
+    uint32_t len;                                 /*!< Transferred data length */
+    uint8_t  setup;                               /*!< Is in a setup phase */
 } usb_dev_ep_cb_msg_t;
 
 /*

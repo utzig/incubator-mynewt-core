@@ -495,6 +495,7 @@ USB_DeviceGetDeviceDescriptor(usb_device_handle handle,
 {
     deviceDescriptor->buffer = g_UsbDeviceDescriptor;
     deviceDescriptor->length = USB_DESCRIPTOR_LENGTH_DEVICE;
+    //printf("ok\n");
     return kStatus_USB_Success;
 }
 
@@ -616,21 +617,21 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
     uint16_t *uartBitmap;
     usb_cdc_acm_info_t *acmInfo = &s_usbCdcAcmInfo;
     usb_dev_cdc_req_param_t *acmReqParam;
-    usb_dev_ep_cb_msg_t *epCbParam;
+    usb_dev_ep_cb_msg_t *ep_param;
     acmReqParam = (usb_dev_cdc_req_param_t *)param;
-    epCbParam = (usb_dev_ep_cb_msg_t *)param;
+    ep_param = (usb_dev_ep_cb_msg_t *)param;
 
     //printf("cdc event=%d\n", event);
     switch (event) {
     case kUSB_DeviceCdcEventSendResponse:
-        if (epCbParam->length && !(epCbParam->length % g_UsbDeviceCdcVcomDicEndpoints[0].maxPacketSize)) {
+        if (ep_param->len && !(ep_param->len % g_UsbDeviceCdcVcomDicEndpoints[0].maxPacketSize)) {
             /* If the last packet is the size of endpoint, then send also zero-ended packet,
              ** meaning that we want to inform the host that we do not have any additional
              ** data, so it can flush the output.
              */
             error = usb_dev_cdc_send(handle, USB_CDC_VCOM_BULK_IN_ENDPOINT, NULL, 0);
         } else if (s_cdc_vcom.attach && s_cdc_vcom.startTransactions) {
-            if (epCbParam->buffer || (!epCbParam->buffer && !epCbParam->length)) {
+            if (ep_param->buf || (!ep_param->buf && !ep_param->len)) {
                 /* User: add your own code for send complete event */
                 /* Schedule buffer for next receive event */
                 error = usb_dev_cdc_recv(handle, USB_CDC_VCOM_BULK_OUT_ENDPOINT, s_currRecvBuf,
@@ -644,7 +645,7 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
         break;
     case kUSB_DeviceCdcEventRecvResponse:
         if (s_cdc_vcom.attach && s_cdc_vcom.startTransactions) {
-            s_recvSize = epCbParam->length;
+            s_recvSize = ep_param->len;
 
 #if defined(USB_DEVICE_CONFIG_KEEP_ALIVE_MODE)
             s_waitForDataReceive = 0;
@@ -936,7 +937,7 @@ usb_app_task_handler(void *arg)
 #endif
         }
         if (last_attach != s_cdc_vcom.attach) {
-            printf("attach=%d, startTransaction=%d\n", s_cdc_vcom.attach, s_cdc_vcom.startTransactions);
+            //printf("attach=%d, startTransaction=%d\n", s_cdc_vcom.attach, s_cdc_vcom.startTransactions);
             last_attach = s_cdc_vcom.attach;
         }
         os_time_delay(1);

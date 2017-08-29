@@ -70,23 +70,23 @@
 
 typedef struct
 {
-    uint8_t  *transferBuffer;
-    uint32_t transferLength;
-    uint32_t transferDone;
+    uint8_t  *xfer_buf;
+    uint32_t xfer_len;
+    uint32_t xfer_done;
     union
     {
         uint32_t state;
         struct
         {
-            uint32_t maxPacketSize : 10;
+            uint32_t max_pkt_size : 10;
             uint32_t stalled : 1;
             uint32_t data0 : 1;
-            uint32_t bdtOdd : 1;
-            uint32_t dmaAlign : 1;
+            uint32_t odd : 1;
+            uint32_t dma_align : 1;
             uint32_t transferring : 1;
             uint32_t zlt : 1;
-        } stateBitField;
-    } stateUnion;
+        } bm;
+    } u;
 } kinetis_usb_dev_ep_state_t;
 
 typedef struct
@@ -110,7 +110,7 @@ typedef struct
                                             When the transfer is done, the received data, kept in dmaAlignBuffer, is copied
                                             to the transferBuffer, and the flag isDmaAlignBufferInusing is cleared.
                                           */
-    kinetis_usb_dev_ep_state_t endpointState[MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) * 2];
+    kinetis_usb_dev_ep_state_t epstate[MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) * 2];
     uint8_t isDmaAlignBufferInusing;
     uint8_t setupBufferIndex;
 #if defined(USB_DEVICE_CONFIG_OTG)
