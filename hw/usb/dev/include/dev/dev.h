@@ -179,7 +179,7 @@ typedef struct
     uint8_t   *buf;
     uint32_t  len;
     uint8_t   code;
-    uint8_t   isSetup;
+    uint8_t   setup;
 } usb_dev_cb_msg_t;
 
 /*

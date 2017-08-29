@@ -290,8 +290,8 @@ _usb_device_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
                 //printf("has_fn\n");
                 cb_msg.buf = msg->buf;
                 cb_msg.len = msg->len;
-                cb_msg.setup = msg->isSetup;
-                if (msg->isSetup) {
+                cb_msg.setup = msg->setup;
+                if (msg->setup) {
                     dev->epcbs[0].busy = 0;
                     dev->epcbs[1].busy = 0;
                 } else {
