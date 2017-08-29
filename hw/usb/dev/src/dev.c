@@ -158,7 +158,6 @@ _usb_device_transfer(usb_device_handle handle, uint8_t ep_addr, uint8_t *buf,
             USB_CacheFlushLines((void *)buf, len);
         }
 #endif
-        //printf("itf->send\n");
         err = dev->ctrl_itf->send(dev->ctrl_handle, ep_addr, buf, len);
     } else {
 #if defined(USB_DEVICE_CONFIG_BUFFER_PROPERTY_CACHEABLE)
@@ -166,7 +165,6 @@ _usb_device_transfer(usb_device_handle handle, uint8_t ep_addr, uint8_t *buf,
             USB_CacheInvalidateLines((void *)buf, len);
         }
 #endif
-        //printf("itf->recv\n");
         err = dev->ctrl_itf->recv(dev->ctrl_handle, ep_addr, buf, len);
     }
     return err;
@@ -605,12 +603,12 @@ usb_dev_set_status(usb_device_handle handle, usb_device_status_t type, void *par
                     error = kStatus_USB_Success;
                     ((usb_dev_t *)handle)->deviceAddress = *(uint8_t *)param;
                     ((usb_dev_t *)handle)->state = kUSB_DeviceStateAddressing;
-                    printf("set addr %d\n", ((usb_dev_t *)handle)->deviceAddress);
+                    //printf("set addr %d\n", ((usb_dev_t *)handle)->deviceAddress);
                 }
             } else {
                 error = _usb_device_control(handle, USB_DEV_CTRL_SET_ADDR,
                                             &((usb_dev_t *)handle)->deviceAddress);
-                printf("set addr %d\n", error);
+                //printf("set addr %d\n", error);
             }
             break;
         case kUSB_DeviceStatusBusResume:

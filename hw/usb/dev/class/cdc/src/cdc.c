@@ -395,22 +395,20 @@ usb_dev_cdc_event(void *handle, uint32_t event, void *param)
         break;
     case kUSB_DeviceClassEventClassRequest:
         if (param) {
-            usb_device_control_request_struct_t *controlRequest =
-                (usb_device_control_request_struct_t *)param;
+            usb_dev_ctrl_req_t *req = (usb_dev_ctrl_req_t *)param;
 
-            if ((controlRequest->setup->wIndex & 0xff) != cdc->itf_num) {
+            if ((req->setup->wIndex & 0xff) != cdc->itf_num) {
                 break;
             }
             /* Standard CDC request */
             if (USB_REQ_TYPE_TYPE_CLASS ==
-                (controlRequest->setup->bmRequestType &
-                 USB_REQ_TYPE_TYPE_MASK)) {
-                reqParam.buffer = &(controlRequest->buffer);
-                reqParam.length = &(controlRequest->length);
-                reqParam.interfaceIndex = controlRequest->setup->wIndex;
-                reqParam.setupValue = controlRequest->setup->wValue;
-                reqParam.isSetup = controlRequest->isSetup;
-                switch (controlRequest->setup->bRequest) {
+                (req->setup->bmRequestType & USB_REQ_TYPE_TYPE_MASK)) {
+                reqParam.buffer = &req->buf;
+                reqParam.length = &req->len;
+                reqParam.interfaceIndex = req->setup->wIndex;
+                reqParam.setupValue = req->setup->wValue;
+                reqParam.isSetup = req->is_setup;
+                switch (req->setup->bRequest) {
                 case USB_DEVICE_CDC_REQUEST_SEND_ENCAPSULATED_COMMAND:
                     err = cdc->config->cb((class_handle_t)cdc,
                             kUSB_DeviceCdcEventSendEncapsulatedCommand, &reqParam);

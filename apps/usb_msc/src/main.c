@@ -485,7 +485,7 @@ usb_dev_cb(usb_device_handle handle, uint32_t event, void *param)
     uint16_t *temp16 = (uint16_t *)param;
     uint8_t *temp8 = (uint8_t *)param;
 
-    printf("event=%lu\n", event);
+    //printf("event=%lu\n", event);
     switch (event) {
     case kUSB_DeviceEventBusReset:
         g_msc.attach = 0;

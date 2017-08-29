@@ -59,12 +59,12 @@
 #define USB_GET_STATUS_INTERFACE_MASK                            0x03
 #define USB_GET_STATUS_ENDPOINT_MASK                             0x03
 
-typedef enum _usb_device_control_read_write_sequence
+typedef enum
 {
     kUSB_DeviceControlPipeSetupStage = 0,  /*!< Setup stage */
     kUSB_DeviceControlPipeDataStage,       /*!< Data stage */
     kUSB_DeviceControlPipeStatusStage,     /*!< status stage */
-} usb_device_control_read_write_sequence_t;
+} usb_dev_ctrl_rw_seq_t;
 
 #if defined(__cplusplus)
 extern "C" {
