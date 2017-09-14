@@ -171,10 +171,10 @@ typedef struct
  */
 typedef struct
 {
-    usb_setup_struct_t  *setup;
-    uint8_t             *buf;
-    uint32_t            len;
-    uint8_t             is_setup;
+    usb_setup_t *setup;
+    uint8_t     *buf;
+    uint32_t    len;
+    uint8_t     is_setup;
 } usb_dev_ctrl_req_t;
 
 typedef struct

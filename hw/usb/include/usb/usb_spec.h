@@ -62,7 +62,7 @@ typedef struct
     uint16_t wValue;
     uint16_t wIndex;
     uint16_t wLength;
-} usb_setup_struct_t;
+} usb_setup_t;
 
 #define USB_ENDPOINT_CONTROL                                             0x00
 #define USB_ENDPOINT_ISOCHRONOUS                                         0x01

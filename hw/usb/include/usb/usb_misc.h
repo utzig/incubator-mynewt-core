@@ -161,15 +161,15 @@
     }
 
 #define USB_LONG_FROM_LITTLE_ENDIAN_ADDRESS(n) \
-    ((uint32_t)(((uint32_t)n[3] << 24U) | ((uint32_t)n[2] << 16U) | \
-                ((uint32_t)n[1] << 8U) | ((uint32_t)n[0] << 0U)))
+    ((uint32_t)(((uint32_t)n[3] << 24) | ((uint32_t)n[2] << 16) | \
+                ((uint32_t)n[1] << 8) | ((uint32_t)n[0] << 0)))
 
 #define USB_LONG_TO_BIG_ENDIAN_ADDRESS(n, m) \
     {                                        \
-        m[0] = ((n >> 24U) & 0xFFU);         \
-        m[1] = ((n >> 16U) & 0xFFU);         \
-        m[2] = ((n >> 8U) & 0xFFU);          \
-        m[3] = (n & 0xFFU);                  \
+        m[0] = ((n >> 24) & 0xFF);           \
+        m[1] = ((n >> 16) & 0xFF);           \
+        m[2] = ((n >> 8) & 0xFF);            \
+        m[3] = (n & 0xFF);                   \
     }
 
 #define USB_LONG_FROM_BIG_ENDIAN_ADDRESS(n) \

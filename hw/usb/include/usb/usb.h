@@ -55,6 +55,7 @@
 #include "usb_misc.h"
 #include "usb_spec.h"
 
+#if 0
 #define USB_STACK_VERSION_MAJOR     1
 #define USB_STACK_VERSION_MINOR     4
 #define USB_STACK_VERSION_BUGFIX    0
@@ -66,6 +67,7 @@
 
 #define USB_MAKE_VERSION(major, minor, bugfix) \
     (((major) << 16) | ((minor) << 8) | (bugfix))
+#endif
 
 typedef enum
 {
@@ -82,10 +84,10 @@ typedef enum
     kStatus_USB_TransferStall,       /*!< Transfer stalled */
     kStatus_USB_TransferFailed,      /*!< Transfer failed */
     kStatus_USB_AllocFail,           /*!< Allocation failed */
-    kStatus_USB_LackSwapBuffer,      /*!< Insufficient swap buffer for KHCI */
-    kStatus_USB_TransferCancel,      /*!< The transfer cancelled */
-    kStatus_USB_BandwidthFail,       /*!< Allocate bandwidth failed */
-    kStatus_USB_MSDStatusFail,       /*!< For MSD, the CSW status means fail */
+    //kStatus_USB_LackSwapBuffer,      /*!< Insufficient swap buffer for KHCI */
+    //kStatus_USB_TransferCancel,      /*!< The transfer cancelled */
+    //kStatus_USB_BandwidthFail,       /*!< Allocate bandwidth failed */
+    //kStatus_USB_MSDStatusFail,       /*!< For MSD, the CSW status means fail */
 } usb_status_t;
 
 typedef void *usb_host_handle;
@@ -94,16 +96,9 @@ typedef void *usb_otg_handle;
 
 /* USB controller ID */
 /* FIXME: this should be removed, hal dep takes care of it */
-typedef enum _usb_controller_index
+typedef enum
 {
     kUSB_ControllerKhci0 = 0,
-    kUSB_ControllerKhci1,
-    kUSB_ControllerEhci0,
-    kUSB_ControllerEhci1,
-    kUSB_ControllerLpcIp3511Fs0,
-    kUSB_ControllerLpcIp3511Fs1,
-    kUSB_ControllerLpcIp3511Hs0,
-    kUSB_ControllerLpcIp3511Hs1,
 } usb_controller_index_t;
 
 typedef struct _usb_version
@@ -112,7 +107,5 @@ typedef struct _usb_version
     uint8_t minor;
     uint8_t bugfix;
 } usb_version_t;
-
-/*! @} */
 
 #endif /* __USB_H__ */

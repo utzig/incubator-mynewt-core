@@ -58,6 +58,7 @@
 
 #include <hal_usb/hal_usb.h>
 
+//FIXME: make dynamic
 usb_dev_cdc_t g_cdc[USB_DEVICE_CONFIG_CDC_ACM_MAX_INSTANCE];
 
 static usb_status_t
@@ -68,7 +69,7 @@ usb_dev_cdc_alloc_handle(usb_dev_cdc_t **handle)
     for (i = 0; i < USB_DEVICE_CONFIG_CDC_ACM_MAX_INSTANCE; i++) {
         if (!g_cdc[i].handle) {
             *handle = &g_cdc[i];
-            return kStatus_USB_Success;
+            return 0;
         }
     }
 
@@ -82,44 +83,29 @@ usb_dev_cdc_free_handle(usb_dev_cdc_t *handle)
     handle->config = NULL;
     handle->config_num = 0;
     handle->alternate = 0;
-    return kStatus_USB_Success;
+    return 0;
 }
 
-/*!
- * This function responds to the interrupt in endpoint event.
- *
- * @param handle The device handle of the CDC ACM device.
- * @param msg The pointer to the message of the endpoint callback.
- * @param callbackParam The pointer to the parameter of the callback.
- */
 static usb_status_t
-usb_dev_cdc_interrupt_in(usb_device_handle handle,
-                         usb_dev_ep_cb_msg_t *msg,
-                         void *callbackParam)
+usb_dev_cdc_interrupt_in(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg,
+        void *param)
 {
     usb_dev_cdc_t *cdc;
 
-    cdc = (usb_dev_cdc_t *)callbackParam;
+    cdc = (usb_dev_cdc_t *)param;
     if (!cdc) {
         return kStatus_USB_InvalidHandle;
     }
 
     cdc->interruptIn.is_busy = false;
     if (cdc->config && cdc->config->cb) {
-        return cdc->config->cb(
-            (class_handle_t)cdc, kUSB_DeviceCdcEventSerialStateNotif, msg);
+        return cdc->config->cb((class_handle_t)cdc,
+                kUSB_DeviceCdcEventSerialStateNotif, msg);
     }
 
     return kStatus_USB_Error;
 }
 
-/*!
- * This function responds to the bulk in endpoint event.
- *
- * @param handle The device handle of the CDC ACM device.
- * @param msg The pointer to the message of the endpoint callback.
- * @param callbackParam The pointer to the parameter of the callback.
- */
 static usb_status_t
 usb_dev_cdc_bulk_in(usb_device_handle handle,
                     usb_dev_ep_cb_msg_t *msg,
@@ -141,13 +127,6 @@ usb_dev_cdc_bulk_in(usb_device_handle handle,
     return kStatus_USB_Error;
 }
 
-/*!
- * This function responds to the bulk out endpoint event.
- *
- * @param handle The device handle of the CDC ACM device.
- * @param msg The pointer to the message of the endpoint callback.
- * @param callbackParam The pointer to the parameter of the callback.
- */
 static usb_status_t
 usb_dev_cdc_bulk_out(usb_device_handle handle,
                      usb_dev_ep_cb_msg_t *msg,
@@ -169,12 +148,6 @@ usb_dev_cdc_bulk_out(usb_device_handle handle,
     return kStatus_USB_Error;
 }
 
-/*!
- * This function initializes the endpoints in CDC ACM class.
- *
- * @param cdc The class handle of the CDC ACM class.
- * @return A USB error code or kStatus_USB_Success.
- */
 static usb_status_t
 usb_dev_cdc_endpoints_init(usb_dev_cdc_t *cdc)
 {
@@ -271,12 +244,6 @@ usb_dev_cdc_endpoints_init(usb_dev_cdc_t *cdc)
     return err;
 }
 
-/*!
- * This function de-initializes the endpoints in CDC ACM class.
- *
- * @param handle The class handle of the CDC ACM class.
- * @return A USB error code or kStatus_USB_Success.
- */
 static usb_status_t
 usb_dev_cdc_endpoints_deinit(usb_dev_cdc_t *handle)
 {
@@ -345,7 +312,7 @@ usb_dev_cdc_event(void *handle, uint32_t event, void *param)
         }
 
         interfaceAlternate = *((uint16_t *)param);
-        alternate = (uint8_t)(interfaceAlternate & 0xFF);
+        alternate = interfaceAlternate & 0xFF;
 
         if (cdc->itf_num != (uint8_t)(interfaceAlternate >> 8)) {
             break;
@@ -356,7 +323,8 @@ usb_dev_cdc_event(void *handle, uint32_t event, void *param)
         err = usb_dev_cdc_endpoints_deinit(cdc);
         cdc->alternate = alternate;
         err = usb_dev_cdc_endpoints_init(cdc);
-        if (kStatus_USB_Success != err) {
+        if (err) {
+            //TODO
             //usb_echo(
             //    "kUSB_DeviceClassEventSetInterface, usb_dev_ep_init fail\n");
         }

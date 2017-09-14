@@ -107,14 +107,10 @@ is_recipient_endpoint(uint8_t reqtype)
 }
 
 typedef usb_status_t (*usb_standard_request_callback_t)(
-    usb_device_common_class_t *class,
-    usb_setup_struct_t *setup,
-    uint8_t * *buffer,
-    uint32_t *length);
+    usb_device_common_class_t *, usb_setup_t *, uint8_t **, uint32_t *);
 
-#define DECLARE_STD_REQ_CB(name) static usb_status_t name(       \
-    usb_device_common_class_t *, usb_setup_struct_t *,           \
-    uint8_t **, uint32_t *)
+#define DECLARE_STD_REQ_CB(name) static usb_status_t name( \
+    usb_device_common_class_t *, usb_setup_t *, uint8_t **, uint32_t *)
 
 DECLARE_STD_REQ_CB(_usb_device_get_status);
 DECLARE_STD_REQ_CB(_usb_device_set_clear_feature);
@@ -143,10 +139,8 @@ static const usb_standard_request_callback_t _std_req_table[] = {
 };
 
 static usb_status_t
-_usb_device_get_status(usb_device_common_class_t *class,
-                       usb_setup_struct_t *setup,
-                       uint8_t * *buffer,
-                       uint32_t *length)
+_usb_device_get_status(usb_device_common_class_t *class, usb_setup_t *setup,
+        uint8_t **buffer, uint32_t *length)
 {
     usb_status_t error = kStatus_USB_InvalidRequest;
     uint8_t state;
@@ -198,9 +192,7 @@ _usb_device_get_status(usb_device_common_class_t *class,
 
 static usb_status_t
 _usb_device_set_clear_feature(usb_device_common_class_t *class,
-                              usb_setup_struct_t *setup,
-                              uint8_t **buffer,
-                              uint32_t *length)
+        usb_setup_t *setup, uint8_t **buffer, uint32_t *length)
 {
     usb_status_t err = kStatus_USB_InvalidRequest;
     uint8_t state;
@@ -267,9 +259,7 @@ _usb_device_set_clear_feature(usb_device_common_class_t *class,
 
 static usb_status_t
 _usb_device_set_address(usb_device_common_class_t *classHandle,
-                        usb_setup_struct_t *setup,
-                        uint8_t * *buffer,
-                        uint32_t *length)
+        usb_setup_t *setup, uint8_t * *buffer, uint32_t *length)
 {
     usb_status_t err = kStatus_USB_InvalidRequest;
     uint8_t state;
@@ -287,7 +277,7 @@ _usb_device_set_address(usb_device_common_class_t *classHandle,
     }
 
     if (state != kUSB_DeviceStateAddressing) {
-        state = setup->wValue & 0xFF;
+        state = setup->wValue & 0xff;
         err = usb_dev_set_status(classHandle->handle,
                                  kUSB_DeviceStatusAddress, &state);
     } else {
@@ -306,14 +296,12 @@ _usb_device_set_address(usb_device_common_class_t *classHandle,
 
 static usb_status_t
 _usb_device_get_descriptor(usb_device_common_class_t *classHandle,
-                           usb_setup_struct_t *setup,
-                           uint8_t **buffer,
-                           uint32_t *length)
+        usb_setup_t *setup, uint8_t **buffer, uint32_t *length)
 {
     usb_device_get_descriptor_common_union_t commonDescriptor;
     uint8_t state;
-    uint8_t type = (uint8_t)((setup->wValue & 0xFF00) >> 8);
-    uint8_t index = (uint8_t)(setup->wValue & 0x00FF);
+    uint8_t type = setup->wValue >> 8;
+    uint8_t index = setup->wValue & 0xff;
     usb_status_t err = kStatus_USB_InvalidRequest;
 
     usb_dev_get_status(classHandle->handle, kUSB_DeviceStatusDeviceState, &state);
@@ -387,9 +375,7 @@ _usb_device_get_descriptor(usb_device_common_class_t *classHandle,
 
 static usb_status_t
 _usb_device_get_configuration(usb_device_common_class_t *classHandle,
-                              usb_setup_struct_t *setup,
-                              uint8_t **buffer,
-                              uint32_t *length)
+        usb_setup_t *setup, uint8_t **buffer, uint32_t *length)
 {
     uint8_t state;
 
@@ -409,9 +395,7 @@ _usb_device_get_configuration(usb_device_common_class_t *classHandle,
 
 static usb_status_t
 _usb_device_set_configuration(usb_device_common_class_t *classHandle,
-                              usb_setup_struct_t *setup,
-                              uint8_t * *buffer,
-                              uint32_t *length)
+        usb_setup_t *setup, uint8_t **buffer, uint32_t *length)
 {
     uint8_t state;
 
@@ -441,9 +425,7 @@ _usb_device_set_configuration(usb_device_common_class_t *classHandle,
 
 static usb_status_t
 _usb_device_get_interface(usb_device_common_class_t *classHandle,
-                          usb_setup_struct_t *setup,
-                          uint8_t **buffer,
-                          uint32_t *length)
+        usb_setup_t *setup, uint8_t **buffer, uint32_t *length)
 {
     uint8_t state;
 
@@ -464,9 +446,7 @@ _usb_device_get_interface(usb_device_common_class_t *classHandle,
 
 static usb_status_t
 _usb_device_set_interface(usb_device_common_class_t *classHandle,
-                          usb_setup_struct_t *setup,
-                          uint8_t **buffer,
-                          uint32_t *length)
+        usb_setup_t *setup, uint8_t **buffer, uint32_t *length)
 {
     uint8_t state;
 
@@ -476,7 +456,7 @@ _usb_device_set_interface(usb_device_common_class_t *classHandle,
     if (state != kUSB_DeviceStateConfigured) {
         return kStatus_USB_InvalidRequest;
     }
-    classHandle->std_transact_buf = ((setup->wIndex & 0xFF) << 8) | (setup->wValue & 0xFF);
+    classHandle->std_transact_buf = ((setup->wIndex & 0xff) << 8) | (setup->wValue & 0xff);
 
     usb_device_class_event(classHandle->handle,
                            kUSB_DeviceClassEventSetInterface,
@@ -489,9 +469,7 @@ _usb_device_set_interface(usb_device_common_class_t *classHandle,
 
 static usb_status_t
 _usb_device_synch_frame(usb_device_common_class_t *classHandle,
-                        usb_setup_struct_t *setup,
-                        uint8_t **buffer,
-                        uint32_t *length)
+        usb_setup_t *setup, uint8_t **buffer, uint32_t *length)
 {
     usb_status_t err = kStatus_USB_InvalidRequest;
     uint8_t state;
@@ -531,9 +509,9 @@ _usb_device_synch_frame(usb_device_common_class_t *classHandle,
  *      phase.
  */
 static usb_status_t
-_usb_device_control_cb_feedback(usb_device_handle handle,
-        usb_setup_struct_t *setup, usb_status_t err,
-        usb_dev_ctrl_rw_seq_t stage, uint8_t **buf, uint32_t *len)
+_usb_device_control_cb_feedback(usb_device_handle handle, usb_setup_t *setup,
+        usb_status_t err, usb_dev_ctrl_rw_seq_t stage, uint8_t **buf,
+        uint32_t *len)
 {
     uint8_t dir = USB_REQ_TYPE_DIR_IN;
 
@@ -567,7 +545,7 @@ _usb_device_control_cb_feedback(usb_device_handle handle,
 static usb_status_t
 _usb_device_control_cb(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void *param)
 {
-    usb_setup_struct_t *setup = NULL;
+    usb_setup_t *setup = NULL;
     usb_device_common_class_t *class = NULL;
     uint8_t *buf = NULL;
     uint32_t len = 0;
@@ -582,7 +560,7 @@ _usb_device_control_cb(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void 
     }
 
     class = (usb_device_common_class_t *)param;
-    setup = (usb_setup_struct_t *)&class->setupBuffer[0];
+    setup = (usb_setup_t *)&class->setupBuffer[0];
     usb_dev_get_status(handle, kUSB_DeviceStatusDeviceState, &state);
 
     //printf("state=%d, len=%ld, wLength=%d, bmRequestType=0x%02x, setup=%d\n", state,
@@ -609,7 +587,7 @@ _usb_device_control_cb(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void 
 #endif
 
         /* Receive a setup request */
-        usb_setup_struct_t *st = (usb_setup_struct_t *)msg->buf;
+        usb_setup_t *st = (usb_setup_t *)msg->buf;
         setup->wValue = USB_SHORT_FROM_LITTLE_ENDIAN(st->wValue);
         setup->wIndex = USB_SHORT_FROM_LITTLE_ENDIAN(st->wIndex);
         setup->wLength = USB_SHORT_FROM_LITTLE_ENDIAN(st->wLength);

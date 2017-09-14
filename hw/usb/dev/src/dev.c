@@ -248,7 +248,7 @@ _usb_device_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
     uint8_t ep = USB_EP_NUMBER(msg->code);
     uint8_t dir = USB_EP_DIR(msg->code);
     usb_status_t err = kStatus_USB_Error;
-    uint8_t epidx;
+    usb_dev_ep_cb_t *epcb = NULL;
     usb_dev_ep_cb_msg_t cb_msg;
 
     switch (msg->code) {
@@ -282,10 +282,8 @@ _usb_device_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 
     default:
         if (ep < MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS)) {
-            epidx = (ep << 1) | dir;
-            //printf("ep=%d, epidx=%d\n", ep, epidx);
-            if (dev->epcbs[epidx].fn) {
-                //printf("has_fn\n");
+            epcb = &dev->epcbs[(ep << 1) | dir];
+            if (epcb->fn) {
                 cb_msg.buf = msg->buf;
                 cb_msg.len = msg->len;
                 cb_msg.setup = msg->setup;
@@ -293,9 +291,12 @@ _usb_device_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
                     dev->epcbs[0].busy = 0;
                     dev->epcbs[1].busy = 0;
                 } else {
-                    dev->epcbs[epidx].busy = 0;
+                    epcb->busy = 0;
                 }
-                err = dev->epcbs[epidx].fn(dev, &cb_msg, dev->epcbs[epidx].param);
+                /*
+                 * calls into higher-level class function
+                 */
+                err = epcb->fn(dev, &cb_msg, epcb->param);
             }
         }
         break;
@@ -648,6 +649,7 @@ usb_device_task_fn(void *deviceHandle)
     }
 }
 
+#if 0
 void
 usb_device_get_version(uint32_t *version)
 {
@@ -657,6 +659,7 @@ usb_device_get_version(uint32_t *version)
                                               USB_STACK_VERSION_BUGFIX);
     }
 }
+#endif
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)
 usb_status_t
