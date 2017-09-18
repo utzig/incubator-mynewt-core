@@ -244,12 +244,11 @@ typedef struct _usb_device_msc_struct
     uint8_t interfaceNumber;   /*!< The interface number of the class */
 } usb_dev_msc_t;
 
-usb_status_t usb_dev_msc_init(uint8_t controllerId,
-                              usb_dev_class_config_t *config,
-                              class_handle_t *handle);
-usb_status_t usb_dev_msc_deinit(class_handle_t handle);
-usb_status_t usb_dev_msc_event(void *handle, uint32_t event, void *param);
-//usb_status_t USB_DeviceMscLbaTransfer(usb_dev_msc_t *mscHandle,
+int usb_dev_msc_init(uint8_t controllerId, usb_dev_class_config_t *config,
+        class_handle_t *handle);
+int usb_dev_msc_deinit(class_handle_t handle);
+int usb_dev_msc_event(void *handle, uint32_t event, void *param);
+//int USB_DeviceMscLbaTransfer(usb_dev_msc_t *mscHandle,
 //                                             uint8_t direction,
 //                                             usb_lba_transfer_information_struct_t *lba_info_ptr);
 
@@ -257,22 +256,22 @@ usb_status_t usb_dev_msc_event(void *handle, uint32_t event, void *param);
 extern "C" {
 #endif
 
-extern usb_status_t USB_DeviceMscUfiThirteenCasesCheck(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiRequestSenseCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiInquiryCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiReadCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiWriteCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiTestUnitReadyCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiVerifyCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiModeSenseCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiModeSelectCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiReadCapacityCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiReadFormatCapacityCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiFormatUnitCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiPreventAllowMediumCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiSendDiagnosticCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiStartStopUnitCommand(usb_dev_msc_t *mscHandle);
-extern usb_status_t USB_DeviceMscUfiUnsupportCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiThirteenCasesCheck(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiRequestSenseCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiInquiryCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiReadCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiWriteCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiTestUnitReadyCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiVerifyCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiModeSenseCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiModeSelectCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiReadCapacityCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiReadFormatCapacityCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiFormatUnitCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiPreventAllowMediumCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiSendDiagnosticCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiStartStopUnitCommand(usb_dev_msc_t *mscHandle);
+extern int USB_DeviceMscUfiUnsupportCommand(usb_dev_msc_t *mscHandle);
 
 #ifdef __cplusplus
 }

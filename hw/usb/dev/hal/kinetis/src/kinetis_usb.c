@@ -69,7 +69,7 @@
 
 static __attribute__((aligned(512))) uint8_t bdt_buffer[512];
 
-static uint8_t g_buf[8] = { 0 };
+//static uint8_t g_buf[8] = { 0xff };
 
 static kinetis_usb_dev_state_t g_kinetis_usb_dev_state;
 
@@ -78,16 +78,13 @@ static uint32_t g_kinetis_usb_dma_buffer[((DMA_ALIGN_LEN - 1) >> 2) + 1];
 
 static void *g_handle = NULL;
 
-static usb_status_t _kinetis_usb_send(usb_dev_ctrl_handle handle,
-                 uint8_t ep_addr, uint8_t *buf, uint32_t len);
-static usb_status_t _kinetis_usb_recv(usb_dev_ctrl_handle khciHandle,
-                 uint8_t endpointAddress,
-                 uint8_t *buffer,
-                 uint32_t length);
-static usb_status_t _kinetis_usb_cancel(usb_dev_ctrl_handle khciHandle,
-                 uint8_t ep);
-static usb_status_t _kinetis_usb_control(usb_dev_ctrl_handle handle,
-                 usb_device_control_type_t type, void *param);
+static int _kinetis_usb_send(usb_dev_ctrl_handle handle, uint8_t ep_addr,
+        uint8_t *buf, uint32_t len);
+static int _kinetis_usb_recv(usb_dev_ctrl_handle handle, uint8_t ep_addr,
+        uint8_t *buf, uint32_t len);
+static int _kinetis_usb_cancel(usb_dev_ctrl_handle handle, uint8_t ep);
+static int _kinetis_usb_control(usb_dev_ctrl_handle handle,
+        usb_device_control_type_t type, void *param);
 
 static uint32_t
 _BDT_MEM(uint32_t base, uint32_t ep, uint32_t dir, uint32_t odd)
@@ -138,7 +135,7 @@ _init_cb_msg_with_code(usb_dev_cb_msg_t *msg, usb_device_notification_t code)
 /*
  * Start a transfer by writing the BDT.
  */
-static usb_status_t
+static int
 _kinetis_usb_dev_ep_txfer(kinetis_usb_dev_state_t *state, uint8_t ep,
         uint8_t dir, uint8_t *buf, uint32_t len)
 {
@@ -163,7 +160,10 @@ _kinetis_usb_dev_ep_txfer(kinetis_usb_dev_state_t *state, uint8_t ep,
 
     OS_EXIT_CRITICAL(sr);
 
-    for (int i=0; i<8; i++) g_buf[i] = buf[i];
+#if 0
+    for (int i=0; i<7; i++) g_buf[i] = buf[i];
+    g_buf[7] = len;
+#endif
 
     state->registers->CTL &= ~USB_CTL_TXSUSPENDTOKENBUSY_MASK;
     return 0;
@@ -187,8 +187,7 @@ _prime_next_setup(kinetis_usb_dev_state_t *state)
     epstate->xfer_buf = (uint8_t *)(state->bdt + 0x200 - 0x10) +
         epstate->u.bm.odd * USB_SETUP_PACKET_SIZE;
 #else
-    epstate->xfer_buf = (uint8_t *)&state->setupPacketBuffer[0] +
-        epstate->u.bm.odd * USB_SETUP_PACKET_SIZE;
+    epstate->xfer_buf = state->setupPacketBuffer + epstate->u.bm.odd * USB_SETUP_PACKET_SIZE;
 #endif
 
     epstate->xfer_done = 0;
@@ -250,7 +249,7 @@ _kinetis_usb_dev_set_dflt(kinetis_usb_dev_state_t *state)
     state->registers->CTL &= ~USB_CTL_TXSUSPENDTOKENBUSY_MASK;
 }
 
-static usb_status_t
+static int
 _kinetis_usb_dev_ep_init(kinetis_usb_dev_state_t *state, usb_dev_ep_init_t *epInit)
 {
     uint16_t maxPacketSize = epInit->maxPacketSize;
@@ -281,15 +280,18 @@ _kinetis_usb_dev_ep_init(kinetis_usb_dev_state_t *state, usb_dev_ep_init_t *epIn
     state->registers->ENDPOINT[ep].ENDPT |= (dir == USB_IN) ?
         USB_ENDPT_EPTXEN_MASK : USB_ENDPT_EPRXEN_MASK;
 
-    /* Prime a transfer to receive next setup packet when the endpoint is control out endpoint. */
+    /* Prime a transfer to receive next setup packet when the endpoint is
+     * control out endpoint.
+     */
     if (ep == 0 && dir == USB_OUT) {
+        //printf("_prime 1\n");
         _prime_next_setup(state);
     }
 
     return 0;
 }
 
-static usb_status_t
+static int
 _kinetis_usb_dev_ep_deinit(kinetis_usb_dev_state_t *state, uint8_t ep_addr)
 {
     uint8_t ep = USB_EP_NUMBER(ep_addr);
@@ -303,7 +305,7 @@ _kinetis_usb_dev_ep_deinit(kinetis_usb_dev_state_t *state, uint8_t ep_addr)
     return 0;
 }
 
-static usb_status_t
+static int
 _kinetis_usb_dev_ep_stall(kinetis_usb_dev_state_t *state, uint8_t ep_addr)
 {
     uint8_t ep = USB_EP_NUMBER(ep_addr);
@@ -329,7 +331,7 @@ _kinetis_usb_dev_ep_stall(kinetis_usb_dev_state_t *state, uint8_t ep_addr)
     return 0;
 }
 
-static usb_status_t
+static int
 _kinetis_usb_dev_ep_unstall(kinetis_usb_dev_state_t *state, uint8_t ep_addr)
 {
     uint32_t control;
@@ -357,6 +359,7 @@ _kinetis_usb_dev_ep_unstall(kinetis_usb_dev_state_t *state, uint8_t ep_addr)
     state->registers->ENDPOINT[ep].ENDPT &= ~USB_ENDPT_EPSTALL_MASK;
 
     if (ep == 0 && dir == USB_OUT) {
+        //printf("_prime 2\n");
         _prime_next_setup(state);
     }
 
@@ -416,7 +419,6 @@ _kinetis_usb_dev_tokdone(kinetis_usb_dev_state_t *state)
         epstate->u.bm.data0 ^= 1;
         epstate->u.bm.odd ^= 1;
 
-        /* Whether the transfer is completed or not. */
         /*
          * The transfer is completed when one of the following conditions meet:
          * 1. The remaining length is zero.
@@ -428,26 +430,26 @@ _kinetis_usb_dev_tokdone(kinetis_usb_dev_state_t *state)
             epstate->u.bm.transferring = 0;
 
             /*
-             * Whether need to send ZLT when the pipe is control in pipe and the transferred length of current
-             * transaction equals to max packet size.
+             * Whether need to send ZLT when the pipe is control in pipe and the
+             * transferred length of current transaction equals to max packet size.
              */
             if (len && !(len % epstate->u.bm.max_pkt_size)) {
                 if (ep == 0) {
-                    usb_setup_struct_t *setup_packet = (usb_setup_struct_t *)
+                    usb_setup_t *setup_packet = (usb_setup_t *)
                         &state->setupPacketBuffer[
                          USB_SETUP_PACKET_SIZE * state->setupBufferIndex];
                     /*
-                     * Send the ZLT and terminate the token done interrupt service when the tranferred length in data
-                     * phase
-                     * is less than the host request.
+                     * Send the ZLT and terminate the token done interrupt service
+                     * when the tranferred length in data phase is less than the
+                     * host request.
                      */
                     if (USB_SHORT_FROM_LITTLE_ENDIAN(setup_packet->wLength) >
                         epstate->xfer_len) {
-                        (void)_kinetis_usb_dev_ep_txfer(state, ep, USB_IN, NULL, 0);
+                        _kinetis_usb_dev_ep_txfer(state, ep, USB_IN, NULL, 0);
                         return;
                     }
                 } else if (epstate->u.bm.zlt) {
-                    (void)_kinetis_usb_dev_ep_txfer(state, ep, USB_IN, NULL, 0);
+                    _kinetis_usb_dev_ep_txfer(state, ep, USB_IN, NULL, 0);
                     return;
                 }
             }
@@ -604,7 +606,7 @@ _kinetis_usb_dev_stall(kinetis_usb_dev_state_t *state)
     }
 
     /* Un-stall the control in and out pipe when the control in or out pipe stalled. */
-    if (state->epstate[0x80].u.bm.stalled || state->epstate[0].u.bm.stalled) {
+    if (state->epstate[0].u.bm.stalled || state->epstate[1].u.bm.stalled) {
         _kinetis_usb_dev_ep_unstall(state, 0x80);
         _kinetis_usb_dev_ep_unstall(state, 0);
     }
@@ -629,7 +631,7 @@ _kinetis_usb_dev_error(kinetis_usb_dev_state_t *state)
  * @param handle       TODO
  * @param ctrl_handle  The controller handle is provided back to caller.
  */
-static usb_status_t
+static int
 _kinetis_usb_init(uint8_t controllerId,
                   usb_device_handle handle,
                   usb_dev_ctrl_handle *ctrl_handle)
@@ -685,13 +687,13 @@ _kinetis_usb_init(uint8_t controllerId,
     return 0;
 }
 
-static usb_status_t
+static int
 _kinetis_usb_deinit(usb_dev_ctrl_handle handle)
 {
     volatile USB_Type *regs = NULL;
 
     if (!handle) {
-        return kStatus_USB_InvalidHandle;
+        return USB_INVALID_HANDLE;
     }
 
     regs = ((kinetis_usb_dev_state_t *) handle)->registers;
@@ -718,12 +720,12 @@ _kinetis_usb_deinit(usb_dev_ctrl_handle handle)
  * The subsequent transfer could begin only when the previous transfer is done (get notification through the endpoint
  * callback).
  */
-static usb_status_t
+static int
 _kinetis_usb_send(usb_dev_ctrl_handle handle, uint8_t ep_addr, uint8_t *buf, uint32_t len)
 {
     kinetis_usb_dev_state_t *state = (kinetis_usb_dev_state_t *)handle;
     kinetis_usb_dev_ep_state_t *epstate = NULL;
-    usb_status_t err = kStatus_USB_Error;
+    int err = USB_ERR;
 
     epstate = &state->epstate[(USB_EP_NUMBER(ep_addr) << 1) | USB_IN];
 
@@ -738,20 +740,22 @@ _kinetis_usb_send(usb_dev_ctrl_handle handle, uint8_t ep_addr, uint8_t *buf, uin
         len = epstate->u.bm.max_pkt_size;
     }
 
-    if (g_buf[1] != 0) {
+#if 0
+    if (g_buf[0] != 0xff) {
         printf("-> ");
         for (int i=0; i<8; i++) printf("[%02x]", g_buf[i]);
         printf(" \n");
-        for (int i=0; i<8; i++) g_buf[i]=0;
+        g_buf[0]=0xff;
     }
+#endif
 
     if (!state->isResetting) {
-        //printf("_kinetis_usb_send, ep=%d len=%d\n", ep_addr, len);
         err = _kinetis_usb_dev_ep_txfer(state, USB_EP_NUMBER(ep_addr), USB_IN,
             (uint8_t *)(epstate->xfer_buf + epstate->xfer_done), len);
     }
 
     if (!epstate->xfer_done && !len && USB_EP_NUMBER(ep_addr) == 0) {
+        //printf("_prime 3\n");
         _prime_next_setup(state);
     }
     return err;
@@ -768,17 +772,18 @@ _kinetis_usb_send(usb_dev_ctrl_handle handle, uint8_t ep_addr, uint8_t *buf, uin
  * application level. The subsequent transfer could begin only when the previous
  * transfer is done (get notification through the endpoint callback).
  */
-static usb_status_t
+static int
 _kinetis_usb_recv(usb_dev_ctrl_handle handle, uint8_t ep, uint8_t *buf, uint32_t len)
 {
     kinetis_usb_dev_state_t *state = (kinetis_usb_dev_state_t *)handle;
     kinetis_usb_dev_ep_state_t *epstate = NULL;
-    usb_status_t err = kStatus_USB_Error;
+    int err = USB_ERR;
 
     epstate = &state->epstate[USB_EP_NUMBER(ep) << 1];
 
     if (!len && USB_EP_NUMBER(ep) == 0) {
         epstate->u.bm.transferring = 0;
+        //printf("_prime 4\n");
         _prime_next_setup(state);
     } else {
         if (!epstate->u.bm.transferring) {
@@ -810,7 +815,7 @@ _kinetis_usb_recv(usb_dev_ctrl_handle handle, uint8_t ep, uint8_t *buf, uint32_t
     return err;
 }
 
-static usb_status_t
+static int
 _kinetis_usb_cancel(usb_dev_ctrl_handle handle, uint8_t ep)
 {
     kinetis_usb_dev_state_t *state = (kinetis_usb_dev_state_t *)handle;
@@ -831,7 +836,7 @@ _kinetis_usb_cancel(usb_dev_ctrl_handle handle, uint8_t ep)
     return 0;
 }
 
-static usb_status_t
+static int
 _kinetis_usb_control(usb_dev_ctrl_handle handle,
                      usb_device_control_type_t type, void *param)
 {
@@ -841,10 +846,10 @@ _kinetis_usb_control(usb_dev_ctrl_handle handle,
     usb_dev_t *dev;
     uint64_t startTick;
 #endif
-    usb_status_t err = kStatus_USB_Error;
+    int err = USB_ERR;
 
     if (!handle) {
-        return kStatus_USB_InvalidHandle;
+        return USB_INVALID_HANDLE;
     }
 
     state = (kinetis_usb_dev_state_t *) handle;
@@ -855,11 +860,11 @@ _kinetis_usb_control(usb_dev_ctrl_handle handle,
 #endif
 
 #if 0
-    if (g_buf[1] != 0) {
+    if (g_buf[0] != 0xff) {
         printf("-> ");
         for (int i=0; i<8; i++) printf("[%02x]", g_buf[i]);
         printf(" \n");
-        for (int i=0; i<8; i++) g_buf[i]=0;
+        g_buf[0]=0xff;
     }
 #endif
 
@@ -1092,7 +1097,7 @@ static const usb_dev_ctrl_itf_t kinetis_interface = {
     _kinetis_usb_control,
 };
 
-usb_status_t
+int
 USB_DeviceErrorNotification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 {
     return dev->devcb(dev, kUSB_DeviceEventError, NULL);

@@ -129,17 +129,15 @@ typedef struct
  * result is. his callback pointer is passed when a specified endpoint is
  * initialized by calling API #USB_DeviceInitEndpoint.
  */
-typedef usb_status_t (*usb_dev_ep_cb_fn)(usb_device_handle handle,
-                                         usb_dev_ep_cb_msg_t *msg,
-                                         void *param);
+typedef int (*usb_dev_ep_cb_fn)(usb_device_handle handle,
+        usb_dev_ep_cb_msg_t *msg, void *param);
 
 /*
  * This callback function is used to notify the upper layer that the device
  * status has changed.
  */
-typedef usb_status_t (*usb_device_callback_t)(usb_device_handle handle,
-                                              uint32_t callbackEvent,
-                                              void *eventParam);
+typedef int (*usb_device_callback_t)(usb_device_handle handle,
+        uint32_t cb_event, void *param);
 
 typedef struct
 {
@@ -207,23 +205,22 @@ typedef enum
     USB_DEV_CTRL_SET_TEST_MODE,
 } usb_device_control_type_t;
 
-typedef usb_status_t (*usb_dev_ctrl_init_fn)(
-        uint8_t ctrl_id, usb_device_handle handle, usb_dev_ctrl_handle *ctrl_handle);
+typedef int (*usb_dev_ctrl_init_fn)(uint8_t ctrl_id, usb_device_handle handle,
+        usb_dev_ctrl_handle *ctrl_handle);
 
-typedef usb_status_t (*usb_dev_ctrl_deinit_fn)(
-        usb_dev_ctrl_handle ctrl_handle);
+typedef int (*usb_dev_ctrl_deinit_fn)(usb_dev_ctrl_handle ctrl_handle);
 
-typedef usb_status_t (*usb_dev_ctrl_send_fn)(
-        usb_dev_ctrl_handle ctrl_handle, uint8_t ep_addr, uint8_t *buf, uint32_t len);
+typedef int (*usb_dev_ctrl_send_fn)(usb_dev_ctrl_handle ctrl_handle,
+        uint8_t ep_addr, uint8_t *buf, uint32_t len);
 
-typedef usb_status_t (*usb_dev_ctrl_recv_fn)(
-        usb_dev_ctrl_handle ctrl_handle, uint8_t ep_addr, uint8_t *buf, uint32_t len);
+typedef int (*usb_dev_ctrl_recv_fn)(usb_dev_ctrl_handle ctrl_handle,
+        uint8_t ep_addr, uint8_t *buf, uint32_t len);
 
-typedef usb_status_t (*usb_dev_ctrl_cancel_fn)(
-        usb_dev_ctrl_handle ctrl_handle, uint8_t ep_addr);
+typedef int (*usb_dev_ctrl_cancel_fn)(usb_dev_ctrl_handle ctrl_handle,
+        uint8_t ep_addr);
 
-typedef usb_status_t (*usb_dev_ctrl_control_fn)(
-        usb_dev_ctrl_handle ctrl_handle, usb_device_control_type_t cmd, void *param);
+typedef int (*usb_dev_ctrl_control_fn)(usb_dev_ctrl_handle ctrl_handle,
+        usb_device_control_type_t cmd, void *param);
 
 typedef struct
 {
@@ -258,19 +255,18 @@ typedef struct
 extern "C" {
 #endif
 
-usb_status_t usb_dev_init(uint8_t controllerId,
-                          usb_device_callback_t devcb,
-                          usb_device_handle *handle);
+int usb_dev_init(uint8_t controllerId, usb_device_callback_t devcb,
+        usb_device_handle *handle);
 
 /*
  * This function enables the device functionality, so that the device can be
  * recognized by the host when the device detects that it has been connected to
  * a host.
  */
-usb_status_t usb_device_run(usb_device_handle handle);
+int usb_device_run(usb_device_handle handle);
 
-usb_status_t usb_device_stop(usb_device_handle handle);
-usb_status_t usb_device_deinit(usb_device_handle handle);
+int usb_device_stop(usb_device_handle handle);
+int usb_device_deinit(usb_device_handle handle);
 
 /*!
  * The function is used to send data through a specified endpoint.
@@ -287,57 +283,42 @@ usb_status_t usb_device_deinit(usb_device_handle handle);
  * application level. The subsequent transfer can begin only when the previous
  * transfer is done (get notification through the endpoint callback).
  */
-usb_status_t usb_device_send_req(usb_device_handle handle,
-                                 uint8_t ep_addr,
-                                 uint8_t *buf,
-                                 uint32_t len);
+int usb_device_send_req(usb_device_handle handle, uint8_t ep_addr,
+        uint8_t *buf, uint32_t len);
 
 /*!
- * @brief Receives data through a specified endpoint.
+ * The function is used to receive data through a specified endpoint. The
+ * function is not reentrant.
  *
- * The function is used to receive data through a specified endpoint. The function is not reentrant.
- *
- * @param[in] endpointAddress Endpoint index.
- * @param[in] buffer The memory address to save the received data.
- * @param[in] length The data length want to be received.
- *
- * @retval kStatus_USB_Success              The receive request is sent successfully.
- * @retval kStatus_USB_InvalidHandle        The handle is a NULL pointer. Or the controller handle is invalid.
- * @retval kStatus_USB_Busy                 Cannot allocate DTDS for current transfer in EHCI driver.
- * @retval kStatus_USB_ControllerNotFound   Cannot find the controller.
- * @retval kStatus_USB_Error                The device is doing reset.
- *
- * @note The return value indicates whether the receiving request is successful or not. The transfer done is notified by
- * the
- * corresponding callback function.
+ * @note The return value indicates whether the receiving request is
+ * successful or not. The transfer done is notified by the corresponding
+ * callback function.
  * Currently, only one transfer request can be supported for one specific endpoint.
- * If there is a specific requirement to support multiple transfer requests for one specific endpoint, the application
- * should implement a queue on the application level.
- * The subsequent transfer can begin only when the previous transfer is done (get notification through the endpoint
- * callback).
+ * If there is a specific requirement to support multiple transfer requests
+ * for one specific endpoint, the application should implement a queue on the
+ * application level.
+ * The subsequent transfer can begin only when the previous transfer is done
+ * (get notification through the endpoint callback).
  */
-usb_status_t usb_device_recv_req(usb_device_handle handle, uint8_t ep_addr,
-                                 uint8_t *buf, uint32_t len);
+int usb_device_recv_req(usb_device_handle handle, uint8_t ep_addr,
+        uint8_t *buf, uint32_t len);
 
-usb_status_t usb_device_cancel(usb_device_handle handle, uint8_t ep_addr);
+int usb_device_cancel(usb_device_handle handle, uint8_t ep_addr);
 
-usb_status_t usb_dev_ep_init(usb_device_handle handle,
-                             usb_dev_ep_init_t *ep_init,
-                             usb_dev_ep_cb_t *epcbs);
+int usb_dev_ep_init(usb_device_handle handle, usb_dev_ep_init_t *ep_init,
+        usb_dev_ep_cb_t *epcbs);
 
-usb_status_t usb_dev_ep_deinit(usb_device_handle handle, uint8_t ep_addr);
-usb_status_t usb_dev_ep_stall(usb_device_handle handle, uint8_t ep_addr);
-usb_status_t usb_dev_ep_unstall(usb_device_handle handle, uint8_t ep_addr);
+int usb_dev_ep_deinit(usb_device_handle handle, uint8_t ep_addr);
+int usb_dev_ep_stall(usb_device_handle handle, uint8_t ep_addr);
+int usb_dev_ep_unstall(usb_device_handle handle, uint8_t ep_addr);
 
-usb_status_t usb_dev_get_status(usb_device_handle handle,
-                                usb_device_status_t type,
-                                void *param);
+int usb_dev_get_status(usb_device_handle handle, usb_device_status_t type,
+        void *param);
 
-usb_status_t usb_dev_set_status(usb_device_handle handle,
-                                usb_device_status_t type,
-                                void *param);
+int usb_dev_set_status(usb_device_handle handle, usb_device_status_t type,
+        void *param);
 
-usb_status_t usb_dev_notify(void *handle, void *msg);
+int usb_dev_notify(void *handle, void *msg);
 
 /*
  * The function is used to handle the controller message.

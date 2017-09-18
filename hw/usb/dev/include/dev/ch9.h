@@ -71,17 +71,10 @@ extern "C" {
 #endif
 
 /*!
- * @brief Initializes the control pipes.
- *
- * The function is used to initialize the control pipes. This function should be called when event
- * kUSB_DeviceEventBusReset is received.
- *
- * @param[in] handle      The device handle.
- * @param[in] param       The event parameter.
- *
- * @return A USB error code or kStatus_USB_Success.
+ * The function is used to initialize the control pipes. This function should
+ * be called when event kUSB_DeviceEventBusReset is received.
  */
-usb_status_t usb_device_control_pipe_init(usb_device_handle handle, void *param);
+int usb_device_control_pipe_init(usb_device_handle handle, void *param);
 
 #if defined(__cplusplus)
 }

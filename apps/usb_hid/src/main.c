@@ -118,8 +118,8 @@ typedef struct
     uint8_t currentInterfaceAlternateSetting[USB_HID_GENERIC_INTERFACE_COUNT];
 } usb_hid_generic_struct_t;
 
-static usb_status_t usb_dev_cb(usb_device_handle handle, uint32_t event, void *param);
-static usb_status_t usb_dev_hid_cb(class_handle_t handle, uint32_t event, void *param);
+static int usb_dev_cb(usb_device_handle handle, uint32_t event, void *param);
+static int usb_dev_hid_cb(class_handle_t handle, uint32_t event, void *param);
 
 
 static uint32_t s_GenericBuffer0[USB_HID_GENERIC_IN_BUFFER_LENGTH >> 2];
@@ -310,30 +310,30 @@ usb_language_list_t g_UsbDeviceLanguageList = {
     USB_DEVICE_LANGUAGE_COUNT,
 };
 
-usb_status_t
+int
 USB_DeviceGetDeviceDescriptor(usb_device_handle handle,
                               usb_device_get_device_descriptor_struct_t *deviceDescriptor)
 {
     deviceDescriptor->buffer = g_UsbDeviceDescriptor;
     deviceDescriptor->length = USB_DESCRIPTOR_LENGTH_DEVICE;
-    return kStatus_USB_Success;
+    return 0;
 }
 
-usb_status_t
+int
 USB_DeviceGetConfigurationDescriptor(usb_device_handle handle,
                                      usb_device_get_configuration_descriptor_struct_t *configurationDescriptor)
 {
     if (USB_HID_GENERIC_CONFIGURE_INDEX > configurationDescriptor->configuration) {
         configurationDescriptor->buffer = g_UsbDeviceConfigurationDescriptor;
         configurationDescriptor->length = USB_DESCRIPTOR_LENGTH_CONFIGURATION_ALL;
-        return kStatus_USB_Success;
+        return 0;
     }
-    return kStatus_USB_InvalidRequest;
+    return USB_INVALID_REQ;
 }
 
-usb_status_t
+int
 USB_DeviceGetStringDescriptor(usb_device_handle handle,
-                              usb_device_get_string_descriptor_struct_t *stringDescriptor)
+                              usb_dev_get_string_desc_t *stringDescriptor)
 {
     if (stringDescriptor->stringIndex == 0) {
         stringDescriptor->buffer = (uint8_t *)g_UsbDeviceLanguageList.languageString;
@@ -352,21 +352,21 @@ USB_DeviceGetStringDescriptor(usb_device_handle handle,
         }
 
         if (USB_DEVICE_STRING_COUNT == languageIndex) {
-            return kStatus_USB_InvalidRequest;
+            return USB_INVALID_REQ;
         }
         stringDescriptor->buffer = (uint8_t *)g_UsbDeviceLanguageList.languageList[languageId].string[languageIndex];
         stringDescriptor->length = g_UsbDeviceLanguageList.languageList[languageId].length[languageIndex];
     }
-    return kStatus_USB_Success;
+    return 0;
 }
 
-usb_status_t
+int
 USB_DeviceGetHidDescriptor(usb_device_handle handle, usb_device_get_hid_descriptor_struct_t *hidDescriptor)
 {
-    return kStatus_USB_InvalidRequest;
+    return USB_INVALID_REQ;
 }
 
-usb_status_t
+int
 USB_DeviceGetHidReportDescriptor(usb_device_handle handle,
                                  usb_device_get_hid_report_descriptor_struct_t *hidReportDescriptor)
 {
@@ -374,16 +374,16 @@ USB_DeviceGetHidReportDescriptor(usb_device_handle handle,
         hidReportDescriptor->buffer = g_UsbDeviceHidGenericReportDescriptor;
         hidReportDescriptor->length = USB_DESCRIPTOR_LENGTH_HID_GENERIC_REPORT;
     } else {
-        return kStatus_USB_InvalidRequest;
+        return USB_INVALID_REQ;
     }
-    return kStatus_USB_Success;
+    return 0;
 }
 
-usb_status_t
+int
 USB_DeviceGetHidPhysicalDescriptor(usb_device_handle handle,
                                    usb_device_get_hid_physical_descriptor_struct_t *hidPhysicalDescriptor)
 {
-    return kStatus_USB_InvalidRequest;
+    return USB_INVALID_REQ;
 }
 
 usb_dev_class_config_t g_UsbDeviceHidConfig[] = {
@@ -400,10 +400,10 @@ static usb_dev_class_configs_t g_UsbDeviceHidConfigList = {
     1,
 };
 
-static usb_status_t
+static int
 usb_dev_hid_cb(class_handle_t handle, uint32_t event, void *param)
 {
-    usb_status_t error = kStatus_USB_Error;
+    int err = USB_ERR;
 
     switch (event) {
     case kUSB_DeviceHidEventSendResponse:
@@ -422,7 +422,7 @@ usb_dev_hid_cb(class_handle_t handle, uint32_t event, void *param)
     case kUSB_DeviceHidEventGetReport:
     case kUSB_DeviceHidEventSetReport:
     case kUSB_DeviceHidEventRequestReportBuffer:
-        error = kStatus_USB_InvalidRequest;
+        err = USB_INVALID_REQ;
         break;
     case kUSB_DeviceHidEventGetIdle:
     case kUSB_DeviceHidEventGetProtocol:
@@ -433,15 +433,15 @@ usb_dev_hid_cb(class_handle_t handle, uint32_t event, void *param)
         break;
     }
 
-    return error;
+    return err;
 }
 
-static usb_status_t
+static int
 usb_dev_cb(usb_device_handle handle, uint32_t event, void *param)
 {
-    usb_status_t error = kStatus_USB_Success;
     uint8_t *temp8 = (uint8_t *)param;
     uint16_t *temp16 = (uint16_t *)param;
+    int err = 0;
 
     switch (event)
     {
@@ -453,7 +453,7 @@ usb_dev_cb(usb_device_handle handle, uint32_t event, void *param)
             g_UsbDeviceHidGeneric.attach = 1;
             g_UsbDeviceHidGeneric.currentConfiguration = *temp8;
             if (USB_HID_GENERIC_CONFIGURE_INDEX == (*temp8)) {
-                error = usb_dev_hid_recv(
+                err = usb_dev_hid_recv(
                     g_UsbDeviceHidGeneric.hidHandle, USB_HID_GENERIC_ENDPOINT_OUT,
                     (uint8_t *)&g_UsbDeviceHidGeneric.buffer[g_UsbDeviceHidGeneric.bufferIndex][0],
                     USB_HID_GENERIC_OUT_BUFFER_LENGTH);
@@ -462,12 +462,12 @@ usb_dev_cb(usb_device_handle handle, uint32_t event, void *param)
         break;
     case kUSB_DeviceEventSetInterface:
         if (g_UsbDeviceHidGeneric.attach) {
-            uint8_t interface = (uint8_t)((*temp16 & 0xFF00) >> 0x08);
-            uint8_t alternateSetting = (uint8_t)(*temp16 & 0x00FF);
+            uint8_t interface = *temp16 >> 8;
+            uint8_t alternateSetting = *temp16;
             if (interface < USB_HID_GENERIC_INTERFACE_COUNT) {
                 g_UsbDeviceHidGeneric.currentInterfaceAlternateSetting[interface] = alternateSetting;
                 if (alternateSetting == 0) {
-                    error = usb_dev_hid_recv(
+                    err = usb_dev_hid_recv(
                         g_UsbDeviceHidGeneric.hidHandle, USB_HID_GENERIC_ENDPOINT_OUT,
                         (uint8_t *)&g_UsbDeviceHidGeneric.buffer[g_UsbDeviceHidGeneric.bufferIndex][0],
                         USB_HID_GENERIC_OUT_BUFFER_LENGTH);
@@ -478,7 +478,6 @@ usb_dev_cb(usb_device_handle handle, uint32_t event, void *param)
     case kUSB_DeviceEventGetConfiguration:
         if (param) {
             *temp8 = g_UsbDeviceHidGeneric.currentConfiguration;
-            error = kStatus_USB_Success;
         }
         break;
     case kUSB_DeviceEventGetInterface:
@@ -486,56 +485,55 @@ usb_dev_cb(usb_device_handle handle, uint32_t event, void *param)
             uint8_t interface = (uint8_t)((*temp16 & 0xFF00) >> 0x08);
             if (interface < USB_HID_GENERIC_INTERFACE_COUNT) {
                 *temp16 = (*temp16 & 0xFF00) | g_UsbDeviceHidGeneric.currentInterfaceAlternateSetting[interface];
-                error = kStatus_USB_Success;
             } else {
-                error = kStatus_USB_InvalidRequest;
+                err = USB_INVALID_REQ;
             }
         }
         break;
     case kUSB_DeviceEventGetDeviceDescriptor:
         if (param) {
-            error = USB_DeviceGetDeviceDescriptor(handle, (usb_device_get_device_descriptor_struct_t *)param);
+            err = USB_DeviceGetDeviceDescriptor(handle, (usb_device_get_device_descriptor_struct_t *)param);
         }
         break;
     case kUSB_DeviceEventGetConfigurationDescriptor:
         if (param) {
-            error = USB_DeviceGetConfigurationDescriptor(handle,
-                                                         (usb_device_get_configuration_descriptor_struct_t *)param);
+            err = USB_DeviceGetConfigurationDescriptor(handle,
+                                                       (usb_device_get_configuration_descriptor_struct_t *)param);
         }
         break;
     case kUSB_DeviceEventGetStringDescriptor:
         if (param) {
-            error = USB_DeviceGetStringDescriptor(handle, (usb_device_get_string_descriptor_struct_t *)param);
+            err = USB_DeviceGetStringDescriptor(handle, (usb_dev_get_string_desc_t *)param);
         }
         break;
     case kUSB_DeviceEventGetHidDescriptor:
         if (param) {
-            error = USB_DeviceGetHidDescriptor(handle, (usb_device_get_hid_descriptor_struct_t *)param);
+            err = USB_DeviceGetHidDescriptor(handle, (usb_device_get_hid_descriptor_struct_t *)param);
         }
         break;
     case kUSB_DeviceEventGetHidReportDescriptor:
         if (param) {
-            error =
+            err =
                 USB_DeviceGetHidReportDescriptor(handle, (usb_device_get_hid_report_descriptor_struct_t *)param);
         }
         break;
     case kUSB_DeviceEventGetHidPhysicalDescriptor:
         if (param) {
-            error = USB_DeviceGetHidPhysicalDescriptor(handle,
-                                                       (usb_device_get_hid_physical_descriptor_struct_t *)param);
+            err = USB_DeviceGetHidPhysicalDescriptor(handle,
+                                                     (usb_device_get_hid_physical_descriptor_struct_t *)param);
         }
         break;
     default:
         break;
     }
 
-    return error;
+    return err;
 }
 
 static void
 usb_device_application_init(void)
 {
-    usb_status_t status;
+    int err;
 
     usb_hal_init_clocks();
     usb_hal_clear_memory();
@@ -547,12 +545,12 @@ usb_device_application_init(void)
     g_UsbDeviceHidGeneric.buffer[0] = (uint8_t *)&s_GenericBuffer0[0];
     g_UsbDeviceHidGeneric.buffer[1] = (uint8_t *)&s_GenericBuffer1[0];
 
-    status = usb_device_class_init(CONTROLLER_ID, &g_UsbDeviceHidConfigList, &g_UsbDeviceHidGeneric.deviceHandle);
-    if (status == kStatus_USB_Success) {
-        g_UsbDeviceHidGeneric.hidHandle = g_UsbDeviceHidConfigList.config->handle;
-    } else {
+    err = usb_device_class_init(CONTROLLER_ID, &g_UsbDeviceHidConfigList, &g_UsbDeviceHidGeneric.deviceHandle);
+    if (err) {
         return;
     }
+
+    g_UsbDeviceHidGeneric.hidHandle = g_UsbDeviceHidConfigList.config->handle;
 
     usb_hal_set_dev_handle(g_UsbDeviceHidGeneric.deviceHandle);
     usb_hal_enable_irq();

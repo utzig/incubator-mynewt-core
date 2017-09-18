@@ -55,40 +55,17 @@
 #include "usb_misc.h"
 #include "usb_spec.h"
 
-#if 0
-#define USB_STACK_VERSION_MAJOR     1
-#define USB_STACK_VERSION_MINOR     4
-#define USB_STACK_VERSION_BUGFIX    0
-
-/* FIXME: apart from error enums and type definitions below,
- * everything here should probably be removed. No need for
- * version stuff, etc
- */
-
-#define USB_MAKE_VERSION(major, minor, bugfix) \
-    (((major) << 16) | ((minor) << 8) | (bugfix))
-#endif
-
-typedef enum
-{
-    kStatus_USB_Success = 0x00,             /*!< Success */
-    kStatus_USB_Error,                      /*!< Failed */
-    kStatus_USB_Busy,                       /*!< Busy */
-    kStatus_USB_InvalidHandle,              /*!< Invalid handle */
-    kStatus_USB_InvalidParameter,           /*!< Invalid parameter */
-    kStatus_USB_InvalidRequest,             /*!< Invalid request */
-    kStatus_USB_ControllerNotFound,         /*!< Controller cannot be found */
-    kStatus_USB_InvalidControllerInterface, /*!< Invalid controller interface */
-    kStatus_USB_NotSupported,        /*!< Configuration is not supported */
-    kStatus_USB_Retry,               /*!< Enumeration get configuration retry */
-    kStatus_USB_TransferStall,       /*!< Transfer stalled */
-    kStatus_USB_TransferFailed,      /*!< Transfer failed */
-    kStatus_USB_AllocFail,           /*!< Allocation failed */
-    //kStatus_USB_LackSwapBuffer,      /*!< Insufficient swap buffer for KHCI */
-    //kStatus_USB_TransferCancel,      /*!< The transfer cancelled */
-    //kStatus_USB_BandwidthFail,       /*!< Allocate bandwidth failed */
-    //kStatus_USB_MSDStatusFail,       /*!< For MSD, the CSW status means fail */
-} usb_status_t;
+#define USB_ERR                      -1
+#define USB_BUSY                     -2
+#define USB_INVALID_HANDLE           -3
+#define USB_INVALID_PARAM            -4
+#define USB_INVALID_REQ              -5
+#define USB_CTRL_NOT_FOUND           -6
+#define USB_INV_CTRL_ITF             -7
+#define USB_NOT_SUPPORTED            -8
+#define USB_RETRY                    -9
+#define USB_XFER_STALL               -10
+#define USB_XFER_FAIL                -11
 
 typedef void *usb_host_handle;
 typedef void *usb_device_handle;

@@ -349,8 +349,8 @@ usb_dev_class_t g_UsbDeviceMscConfig = {
     USB_CONFIGURE_COUNT,         /* The configuration count */
 };
 
-static usb_status_t usb_dev_cb(usb_device_handle handle, uint32_t event, void *param);
-static usb_status_t usb_dev_msc_cb(class_handle_t handle, uint32_t event, void *param);
+static int usb_dev_cb(usb_device_handle handle, uint32_t event, void *param);
+static int usb_dev_msc_cb(class_handle_t handle, uint32_t event, void *param);
 
 usb_dev_class_config_t msc_config[] = {
     {
@@ -366,34 +366,35 @@ static usb_dev_class_configs_t msc_config_list = {
     1,
 };
 
-usb_status_t USB_DeviceGetDeviceDescriptor(usb_device_handle handle,
-                                           usb_device_get_device_descriptor_struct_t *deviceDescriptor)
+int USB_DeviceGetDeviceDescriptor(usb_device_handle handle,
+                                  usb_device_get_device_descriptor_struct_t *deviceDescriptor)
 {
     deviceDescriptor->buffer = g_UsbDeviceDescriptor;
     deviceDescriptor->length = USB_DESCRIPTOR_LENGTH_DEVICE;
-    return kStatus_USB_Success;
+    return 0;
 }
 
-usb_status_t USB_DeviceGetConfigurationDescriptor(
-    usb_device_handle handle, usb_device_get_configuration_descriptor_struct_t *configurationDescriptor)
+int
+USB_DeviceGetConfigurationDescriptor(usb_device_handle handle,
+        usb_device_get_configuration_descriptor_struct_t *configurationDescriptor)
 {
     if (USB_MSC_CONFIGURE_INDEX > configurationDescriptor->configuration)
     {
         configurationDescriptor->buffer = g_UsbDeviceConfigurationDescriptor;
         configurationDescriptor->length = USB_DESCRIPTOR_LENGTH_CONFIGURATION_ALL;
-        return kStatus_USB_Success;
+        return 0;
     }
-    return kStatus_USB_InvalidRequest;
+    return USB_INVALID_REQ;
 }
 
-usb_status_t USB_DeviceGetStringDescriptor(usb_device_handle handle,
-                                           usb_device_get_string_descriptor_struct_t *stringDescriptor)
+int USB_DeviceGetStringDescriptor(usb_device_handle handle,
+                                  usb_dev_get_string_desc_t *stringDescriptor)
 {
     if (stringDescriptor->stringIndex == 0) {
         stringDescriptor->buffer = (uint8_t *)g_UsbDeviceLanguageList.languageString;
         stringDescriptor->length = g_UsbDeviceLanguageList.stringLength;
     } else {
-        uint8_t languageId = 0U;
+        uint8_t languageId = 0;
         uint8_t languageIndex = USB_DEVICE_STRING_COUNT;
 
         for (; languageId < USB_DEVICE_LANGUAGE_COUNT; languageId++) {
@@ -405,41 +406,40 @@ usb_status_t USB_DeviceGetStringDescriptor(usb_device_handle handle,
             }
         }
 
-        if (USB_DEVICE_STRING_COUNT == languageIndex) {
-            return kStatus_USB_InvalidRequest;
+        if (languageIndex == USB_DEVICE_STRING_COUNT) {
+            return USB_INVALID_REQ;
         }
         stringDescriptor->buffer = (uint8_t *)g_UsbDeviceLanguageList.languageList[languageId].string[languageIndex];
         stringDescriptor->length = g_UsbDeviceLanguageList.languageList[languageId].length[languageIndex];
     }
-    return kStatus_USB_Success;
+    return 0;
 }
 
 
-static usb_status_t
+static int
 usb_dev_msc_cb(class_handle_t handle, uint32_t event, void *param)
 {
-    usb_status_t error = kStatus_USB_Error;
+    int err = USB_ERR;
     usb_device_lba_information_struct_t *lbaInformationStructure;
-    usb_device_lba_app_struct_t *lbaData;
+    usb_device_lba_app_struct_t *lba;
     usb_device_ufi_app_struct_t *ufi;
 
-    switch (event)
-    {
+    switch (event) {
     case kUSB_DeviceMscEventReadResponse:
-        lbaData = (usb_device_lba_app_struct_t *)param;
+        lba = (usb_device_lba_app_struct_t *)param;
         break;
     case kUSB_DeviceMscEventWriteResponse:
-        lbaData = (usb_device_lba_app_struct_t *)param;
+        lba = (usb_device_lba_app_struct_t *)param;
         break;
     case kUSB_DeviceMscEventWriteRequest:
-        lbaData = (usb_device_lba_app_struct_t *)param;
+        lba = (usb_device_lba_app_struct_t *)param;
         /*offset is the write start address get from write command, refer to class driver*/
-        lbaData->buffer = g_msc.storageDisk + lbaData->offset * LENGTH_OF_EACH_LBA;
+        lba->buffer = g_msc.storageDisk + lba->offset * LENGTH_OF_EACH_LBA;
         break;
     case kUSB_DeviceMscEventReadRequest:
-        lbaData = (usb_device_lba_app_struct_t *)param;
+        lba = (usb_device_lba_app_struct_t *)param;
         /*offset is the read start address get from read command, refer to class driver*/
-        lbaData->buffer = g_msc.storageDisk + lbaData->offset * LENGTH_OF_EACH_LBA;
+        lba->buffer = g_msc.storageDisk + lba->offset * LENGTH_OF_EACH_LBA;
         break;
     case kUSB_DeviceMscEventGetLbaInformation:
         lbaInformationStructure = (usb_device_lba_information_struct_t *)param;
@@ -475,13 +475,13 @@ usb_dev_msc_cb(class_handle_t handle, uint32_t event, void *param)
     default:
         break;
     }
-    return error;
+    return err;
 }
 
-static usb_status_t
+static int
 usb_dev_cb(usb_device_handle handle, uint32_t event, void *param)
 {
-    usb_status_t error = kStatus_USB_Error;
+    int err = USB_ERR;
     uint16_t *temp16 = (uint16_t *)param;
     uint8_t *temp8 = (uint8_t *)param;
 
@@ -489,7 +489,7 @@ usb_dev_cb(usb_device_handle handle, uint32_t event, void *param)
     switch (event) {
     case kUSB_DeviceEventBusReset:
         g_msc.attach = 0;
-        error = kStatus_USB_Success;
+        err = 0;
         break;
     case kUSB_DeviceEventSetConfiguration:
         if (param) {
@@ -500,7 +500,7 @@ usb_dev_cb(usb_device_handle handle, uint32_t event, void *param)
     case kUSB_DeviceEventSetInterface:
         if (g_msc.attach) {
             uint8_t interface = (uint8_t)((*temp16 & 0xFF00) >> 0x08);
-            uint8_t alternateSetting = (uint8_t)(*temp16 & 0x00FF);
+            uint8_t alternateSetting = *temp16;
             if (interface < USB_MSC_INTERFACE_COUNT) {
                 g_msc.currentInterfaceAlternateSetting[interface] = alternateSetting;
             }
@@ -509,7 +509,7 @@ usb_dev_cb(usb_device_handle handle, uint32_t event, void *param)
     case kUSB_DeviceEventGetConfiguration:
         if (param) {
             *temp8 = g_msc.currentConfiguration;
-            error = kStatus_USB_Success;
+            err = 0;
         }
         break;
     case kUSB_DeviceEventGetInterface:
@@ -517,37 +517,38 @@ usb_dev_cb(usb_device_handle handle, uint32_t event, void *param)
             uint8_t interface = (uint8_t)((*temp16 & 0xFF00) >> 0x08);
             if (interface < USB_INTERFACE_COUNT) {
                 *temp16 = (*temp16 & 0xFF00) | g_msc.currentInterfaceAlternateSetting[interface];
-                error = kStatus_USB_Success;
+                err = 0;
             } else {
-                error = kStatus_USB_InvalidRequest;
+                err = USB_INVALID_REQ;
             }
         }
         break;
     case kUSB_DeviceEventGetDeviceDescriptor:
         if (param) {
-            error = USB_DeviceGetDeviceDescriptor(handle, (usb_device_get_device_descriptor_struct_t *)param);
+            err = USB_DeviceGetDeviceDescriptor(handle,
+                    (usb_device_get_device_descriptor_struct_t *)param);
         }
         break;
     case kUSB_DeviceEventGetConfigurationDescriptor:
         if (param) {
-            error = USB_DeviceGetConfigurationDescriptor(handle,
-                                                         (usb_device_get_configuration_descriptor_struct_t *)param);
+            err = USB_DeviceGetConfigurationDescriptor(handle,
+                    (usb_device_get_configuration_descriptor_struct_t *)param);
         }
         break;
     case kUSB_DeviceEventGetStringDescriptor:
         if (param) {
-            error = USB_DeviceGetStringDescriptor(handle, (usb_device_get_string_descriptor_struct_t *)param);
+            err = USB_DeviceGetStringDescriptor(handle, (usb_dev_get_string_desc_t *)param);
         }
         break;
     }
 
-    return error;
+    return err;
 }
 
 static void
 usb_device_application_init(void)
 {
-    usb_status_t status;
+    int err;
 
     usb_hal_init_clocks();
     usb_hal_clear_memory();
@@ -558,12 +559,12 @@ usb_device_application_init(void)
     g_msc.deviceHandle = NULL;
     g_msc.storageDisk = &s_StorageDisk[0];
 
-    status = usb_device_class_init(CONTROLLER_ID, &msc_config_list, &g_msc.deviceHandle);
-    if (status == kStatus_USB_Success) {
-        g_msc.mscHandle = msc_config_list.config->handle;
-    } else {
+    err = usb_device_class_init(CONTROLLER_ID, &msc_config_list, &g_msc.deviceHandle);
+    if (err) {
         return;
     }
+
+    g_msc.mscHandle = msc_config_list.config->handle;
 
     usb_hal_set_dev_handle(g_msc.deviceHandle);
     usb_hal_enable_irq();

@@ -59,12 +59,12 @@
 
 #include <hal_usb/hal_usb.h>
 
-usb_status_t usb_dev_msc_recv(usb_dev_msc_t *msc);
-usb_status_t usb_dev_msc_send(usb_dev_msc_t *msc);
-usb_status_t usb_dev_msc_bulk_out(usb_device_handle handle,
-        usb_dev_ep_cb_msg_t *msg, void *param);
-usb_status_t usb_dev_msc_bulk_in(usb_device_handle handle,
-        usb_dev_ep_cb_msg_t *msg, void *param);
+int usb_dev_msc_recv(usb_dev_msc_t *msc);
+int usb_dev_msc_send(usb_dev_msc_t *msc);
+int usb_dev_msc_bulk_out(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg,
+        void *param);
+int usb_dev_msc_bulk_in(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg,
+        void *param);
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_MSC) == 1
 usb_device_msc_cbw_t s_MscCbw1;
@@ -104,7 +104,7 @@ usb_device_msc_csw_t s_MscCsw4;
 
 usb_dev_msc_t g_msc_handle[MYNEWT_VAL(USB_DEVICE_CONFIG_MSC)];
 
-static usb_status_t
+static int
 usb_dev_msc_alloc_handle(usb_dev_msc_t **handle)
 {
     int i;
@@ -118,10 +118,10 @@ usb_dev_msc_alloc_handle(usb_dev_msc_t **handle)
         }
     }
 
-    return kStatus_USB_Busy;
+    return USB_BUSY;
 }
 
-static usb_status_t
+static int
 usb_dev_msc_free_handle(usb_dev_msc_t *handle)
 {
     assert(handle);
@@ -129,14 +129,14 @@ usb_dev_msc_free_handle(usb_dev_msc_t *handle)
     handle->configurationStruct = NULL;
     handle->configuration = 0;
     handle->alternate = 0;
-    return kStatus_USB_Success;
+    return 0;
 }
 
-static usb_status_t
+static int
 USB_DeviceMscProcessUfiCommand(usb_dev_msc_t *msc)
 {
-    usb_status_t error = kStatus_USB_Error;
     usb_device_msc_ufi_struct_t *ufi = NULL;
+    int err = USB_ERR;
 
     ufi = &msc->mscUfi;
     if (USB_DEVICE_MSC_REQUEST_SENSE_COMMAND != msc->mscCbw->cbwcb[0]) {
@@ -149,54 +149,54 @@ USB_DeviceMscProcessUfiCommand(usb_dev_msc_t *msc)
 
     switch (msc->mscCbw->cbwcb[0]) {
     case USB_DEVICE_MSC_INQUIRY_COMMAND:
-        error = USB_DeviceMscUfiInquiryCommand(msc);
+        err = USB_DeviceMscUfiInquiryCommand(msc);
         break;
     case USB_DEVICE_MSC_READ_10_COMMAND:
     case USB_DEVICE_MSC_READ_12_COMMAND:
-        error = USB_DeviceMscUfiReadCommand(msc);
+        err = USB_DeviceMscUfiReadCommand(msc);
         break;
     case USB_DEVICE_MSC_REQUEST_SENSE_COMMAND:
-        error = USB_DeviceMscUfiRequestSenseCommand(msc);
+        err = USB_DeviceMscUfiRequestSenseCommand(msc);
         break;
     case USB_DEVICE_MSC_TEST_UNIT_READY_COMMAND:
-        error = USB_DeviceMscUfiTestUnitReadyCommand(msc);
+        err = USB_DeviceMscUfiTestUnitReadyCommand(msc);
         break;
     case USB_DEVICE_MSC_WRITE_10_COMMAND:
     case USB_DEVICE_MSC_WRITE_12_COMMAND:
-        error = USB_DeviceMscUfiWriteCommand(msc);
+        err = USB_DeviceMscUfiWriteCommand(msc);
         break;
     case USB_DEVICE_MSC_PREVENT_ALLOW_MEDIUM_REM_COMMAND:
-        error = USB_DeviceMscUfiPreventAllowMediumCommand(msc);
+        err = USB_DeviceMscUfiPreventAllowMediumCommand(msc);
         break;
     case USB_DEVICE_MSC_FORMAT_UNIT_COMMAND:
-        error = USB_DeviceMscUfiFormatUnitCommand(msc);
+        err = USB_DeviceMscUfiFormatUnitCommand(msc);
         break;
     case USB_DEVICE_MSC_READ_CAPACITY_10_COMMAND:
     case USB_DEVICE_MSC_READ_CAPACITY_16_COMMAND:
-        error = USB_DeviceMscUfiReadCapacityCommand(msc);
+        err = USB_DeviceMscUfiReadCapacityCommand(msc);
         break;
     case USB_DEVICE_MSC_MODE_SENSE_10_COMMAND:
     case USB_DEVICE_MSC_MODE_SENSE_6_COMMAND:
-        error = USB_DeviceMscUfiModeSenseCommand(msc);
+        err = USB_DeviceMscUfiModeSenseCommand(msc);
         break;
     case USB_DEVICE_MSC_MODE_SELECT_10_COMMAND:
     case USB_DEVICE_MSC_MODE_SELECT_6_COMMAND:
-        error = USB_DeviceMscUfiModeSelectCommand(msc);
+        err = USB_DeviceMscUfiModeSelectCommand(msc);
         break;
     case USB_DEVICE_MSC_READ_FORMAT_CAPACITIES_COMMAND:
-        error = USB_DeviceMscUfiReadFormatCapacityCommand(msc);
+        err = USB_DeviceMscUfiReadFormatCapacityCommand(msc);
         break;
     case USB_DEVICE_MSC_SEND_DIAGNOSTIC_COMMAND:
-        error = USB_DeviceMscUfiSendDiagnosticCommand(msc);
+        err = USB_DeviceMscUfiSendDiagnosticCommand(msc);
         break;
     case USB_DEVICE_MSC_VERIFY_COMMAND:
-        error = USB_DeviceMscUfiVerifyCommand(msc);
+        err = USB_DeviceMscUfiVerifyCommand(msc);
         break;
     case USB_DEVICE_MSC_START_STOP_UNIT_COMMAND:
-        error = USB_DeviceMscUfiStartStopUnitCommand(msc);
+        err = USB_DeviceMscUfiStartStopUnitCommand(msc);
         break;
     default:
-        error = USB_DeviceMscUfiUnsupportCommand(msc);
+        err = USB_DeviceMscUfiUnsupportCommand(msc);
         msc->dataOutFlag = 0;
         msc->dataInFlag = 0;
         msc->outEndpointStallFlag = 0;
@@ -211,28 +211,28 @@ USB_DeviceMscProcessUfiCommand(usb_dev_msc_t *msc)
         USB_DEVICE_MSC_REQUEST_SENSE_COMMAND != msc->mscCbw->cbwcb[0]) {
         msc->mscCsw->cswStatus = USB_DEVICE_MSC_COMMAND_FAILED;
     }
-    return error;
+    return err;
 }
 
-usb_status_t
+int
 usb_dev_msc_bulk_in(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void *param)
 {
     usb_dev_msc_t *msc = (usb_dev_msc_t *)param;
     usb_device_msc_csw_t *csw;
-    usb_status_t error = kStatus_USB_Error;
+    usb_device_lba_app_struct_t lba;
+    int err = USB_ERR;
 
     if (msg->len == USB_UNINITIALIZED_VAL_32) {
         if (msc->dataInFlag && msc->configurationStruct->cb &&
             (USB_DEVICE_MSC_READ_10_COMMAND == msc->mscCbw->cbwcb[0] ||
              USB_DEVICE_MSC_READ_12_COMMAND == msc->mscCbw->cbwcb[0])) {
-            usb_device_lba_app_struct_t lbaData;
-            lbaData.size = 0;
-            lbaData.buffer = msg->buf;
-            lbaData.offset = 0;
+            lba.size = 0;
+            lba.buffer = msg->buf;
+            lba.offset = 0;
             msc->configurationStruct->cb((class_handle_t)msc,
-                    kUSB_DeviceMscEventReadResponse, (void *)&lbaData);
+                    kUSB_DeviceMscEventReadResponse, (void *)&lba);
         }
-        return error;
+        return err;
     }
     if (msc->transferRemaining >= msg->len) {
         msc->transferRemaining -= msg->len;
@@ -243,7 +243,7 @@ usb_dev_msc_bulk_in(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void *pa
         msc->inEndpointStallFlag = 1;
         msc->dataInFlag = 0;
         usb_dev_ep_stall(msc->handle, msc->bulkInEndpoint);
-        return error;
+        return err;
     }
     if (!msc->dataInFlag && msg->len == USB_DEVICE_MSC_CSW_LENGTH) {
         csw = (usb_device_msc_csw_t *)msg->buf;
@@ -251,21 +251,19 @@ usb_dev_msc_bulk_in(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void *pa
 
     if (msc->dataInFlag) {
         if (msc->configurationStruct->cb) {
-            usb_device_lba_app_struct_t lbaData;
-
-            lbaData.size = msg->len;
-            lbaData.buffer = msg->buf;
-            lbaData.offset = msc->currentOffset;
+            lba.size = msg->len;
+            lba.buffer = msg->buf;
+            lba.offset = msc->currentOffset;
 
             if (USB_DEVICE_MSC_READ_10_COMMAND == msc->mscCbw->cbwcb[0] ||
                 USB_DEVICE_MSC_READ_12_COMMAND == msc->mscCbw->cbwcb[0]) {
                 msc->configurationStruct->cb((class_handle_t)msc,
-                        kUSB_DeviceMscEventReadResponse, (void *)&lbaData);
+                        kUSB_DeviceMscEventReadResponse, (void *)&lba);
             }
 
             if (msc->transferRemaining) {
                 msc->currentOffset += msg->len / msc->lengthOfEachLba;
-                error = usb_dev_msc_send(msc);
+                err = usb_dev_msc_send(msc);
             }
             if (!msc->transferRemaining) {
                 msc->dataInFlag = 0;
@@ -284,26 +282,27 @@ usb_dev_msc_bulk_in(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void *pa
         msc->cbwPrimeFlag = 1;
     }
 
-    return error;
+    return err;
 }
 
-usb_status_t
+int
 usb_dev_msc_bulk_out(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void *param)
 {
     usb_dev_msc_t *msc = (usb_dev_msc_t *)param;
-    usb_status_t error = kStatus_USB_Success;
+    usb_device_lba_app_struct_t lba;
+    int err = 0;
+
     if (msg->len == USB_UNINITIALIZED_VAL_32) {
         if (msc->dataOutFlag && msc->configurationStruct->cb &&
             (USB_DEVICE_MSC_WRITE_10_COMMAND == msc->mscCbw->cbwcb[0] ||
              USB_DEVICE_MSC_WRITE_12_COMMAND == msc->mscCbw->cbwcb[0])) {
-            usb_device_lba_app_struct_t lbaData;
-            lbaData.size = 0;
-            lbaData.buffer = msg->buf;
-            lbaData.offset = 0;
+            lba.size = 0;
+            lba.buffer = msg->buf;
+            lba.offset = 0;
             msc->configurationStruct->cb((class_handle_t)msc,
-                    kUSB_DeviceMscEventWriteResponse, (void *)&lbaData);
+                    kUSB_DeviceMscEventWriteResponse, (void *)&lba);
         }
-        return error;
+        return err;
     }
 
     if (msc->transferRemaining >= msg->len) {
@@ -323,26 +322,24 @@ usb_dev_msc_bulk_out(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void *p
         msc->dataOutFlag = 0;
         msc->cbwPrimeFlag = 0;
         usb_dev_ep_stall(msc->handle, msc->bulkOutEndpoint);
-        return error;
+        return err;
     }
 
     if (msc->dataOutFlag) {
-        usb_device_lba_app_struct_t lbaData;
-
-        lbaData.size = msg->len;
-        lbaData.buffer = msg->buf;
-        lbaData.offset = msc->currentOffset;
+        lba.size = msg->len;
+        lba.buffer = msg->buf;
+        lba.offset = msc->currentOffset;
 
         if (msc->configurationStruct->cb) {
             if (USB_DEVICE_MSC_WRITE_10_COMMAND == msc->mscCbw->cbwcb[0] ||
                 USB_DEVICE_MSC_WRITE_12_COMMAND == msc->mscCbw->cbwcb[0]) {
                 msc->configurationStruct->cb((class_handle_t)msc,
-                        kUSB_DeviceMscEventWriteResponse, (void *)&lbaData);
+                        kUSB_DeviceMscEventWriteResponse, (void *)&lba);
             }
 
             if (msc->transferRemaining) {
                 msc->currentOffset += (msg->len / msc->lengthOfEachLba);
-                error = usb_dev_msc_recv(msc);
+                err = usb_dev_msc_recv(msc);
             }
         }
 
@@ -375,11 +372,11 @@ usb_dev_msc_bulk_out(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void *p
                 msc->mscCbw->dataTransferLength) ? 1 : 0;
 
         if (msc->dataInFlag && msc->inEndpointStallFlag) {
-            error = kStatus_USB_Error;
-            return error;
+            return USB_ERR;
         }
-        error = USB_DeviceMscProcessUfiCommand(msc);
-        if (error == kStatus_USB_InvalidRequest) {
+
+        err = USB_DeviceMscProcessUfiCommand(msc);
+        if (err == USB_INVALID_REQ) {
             if (msc->dataOutFlag) {
                 if (!msc->outEndpointStallFlag) {
                     msc->needOutStallFlag = 1;
@@ -408,49 +405,51 @@ usb_dev_msc_bulk_out(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void *p
         msc->stallStatus = (uint8_t)USB_DEVICE_MSC_STALL_IN_CBW;
         msc->performResetRecover = 1;
     }
-    return error;
+    return err;
 }
 
-usb_status_t usb_dev_msc_eps_init(usb_dev_msc_t *msc)
+int
+usb_dev_msc_eps_init(usb_dev_msc_t *msc)
 {
     usb_device_interface_list_t *interfaceList;
     usb_dev_itf_t *interface = NULL;
-    usb_status_t error = kStatus_USB_Error;
+    int i, j;
+    int err = USB_ERR;
 
     if (!msc->configuration ||
         msc->configuration > msc->configurationStruct->info->configurations) {
-        return error;
+        return err;
     }
 
     if (!msc->configurationStruct->info->interfaceList) {
-        return error;
+        return err;
     }
     interfaceList = &msc->configurationStruct->info->interfaceList[msc->configuration - 1];
 
-    for (int count = 0; count < interfaceList->count; count++) {
-        if (USB_DEVICE_CONFIG_MSC_CLASS_CODE == interfaceList->itfs[count].classCode) {
-            for (int index = 0; index < interfaceList->itfs[count].count; index++) {
-                if (interfaceList->itfs[count].itf[index].alternateSetting == msc->alternate) {
-                    interface = &interfaceList->itfs[count].itf[index];
+    for (i = 0; i < interfaceList->count; i++) {
+        if (USB_DEVICE_CONFIG_MSC_CLASS_CODE == interfaceList->itfs[i].classCode) {
+            for (j = 0; j < interfaceList->itfs[i].count; j++) {
+                if (interfaceList->itfs[i].itf[j].alternateSetting == msc->alternate) {
+                    interface = &interfaceList->itfs[i].itf[j];
                     break;
                 }
             }
-            msc->interfaceNumber = interfaceList->itfs[count].itf_num;
+            msc->interfaceNumber = interfaceList->itfs[i].itf_num;
             break;
         }
     }
     if (!interface) {
-        return error;
+        return err;
     }
 
     msc->interfaceHandle = interface;
-    for (int count = 0; count < interface->eps.count; count++) {
+    for (i = 0; i < interface->eps.count; i++) {
         usb_dev_ep_init_t epInitStruct;
         usb_dev_ep_cb_t ep_cb;
         epInitStruct.zlt = 0;
-        epInitStruct.endpointAddress = interface->eps.ep[count].ep_addr;
-        epInitStruct.maxPacketSize = interface->eps.ep[count].maxPacketSize;
-        epInitStruct.transferType = interface->eps.ep[count].transferType;
+        epInitStruct.endpointAddress = interface->eps.ep[i].ep_addr;
+        epInitStruct.maxPacketSize = interface->eps.ep[i].maxPacketSize;
+        epInitStruct.transferType = interface->eps.ep[i].transferType;
 
         if (USB_IN == ((epInitStruct.endpointAddress & USB_DESC_EP_ADDR_DIR_MASK) >>
                        USB_DESC_EP_ADDR_DIR_SHIFT)) {
@@ -462,7 +461,7 @@ usb_status_t usb_dev_msc_eps_init(usb_dev_msc_t *msc)
         }
         ep_cb.param = msc;
 
-        error = usb_dev_ep_init(msc->handle, &epInitStruct, &ep_cb);
+        err = usb_dev_ep_init(msc->handle, &epInitStruct, &ep_cb);
     }
 
     msc->dataOutFlag = 0;
@@ -484,63 +483,62 @@ usb_status_t usb_dev_msc_eps_init(usb_dev_msc_t *msc)
             (uint8_t *)msc->mscCbw, USB_DEVICE_MSC_CBW_LENGTH);
     msc->cbwPrimeFlag = 1;
 
-    return error;
+    return err;
 }
 
-usb_status_t
+int
 usb_dev_msc_eps_deinit(usb_dev_msc_t *msc)
 {
-    usb_status_t error = kStatus_USB_Error;
     int i;
+    int err = USB_ERR;
 
     if (!msc->interfaceHandle) {
-        return error;
+        return err;
     }
 
     for (i = 0; i < msc->interfaceHandle->eps.count; i++) {
-        error = usb_dev_ep_deinit(msc->handle,
-                msc->interfaceHandle->eps.ep[i].ep_addr);
+        err = usb_dev_ep_deinit(msc->handle, msc->interfaceHandle->eps.ep[i].ep_addr);
     }
     msc->interfaceHandle = NULL;
-    return error;
+    return err;
 }
 
-usb_status_t
+int
 usb_dev_msc_init(uint8_t controllerId, usb_dev_class_config_t *config, class_handle_t *handle)
 {
     usb_dev_msc_t *msc;
-    usb_status_t error = kStatus_USB_Error;
     uint32_t implementingDiskDrive = USB_DEVICE_CONFIG_MSC_IMPLEMENTING_DISK_DRIVE;
     usb_device_lba_information_struct_t diskInformation;
     usb_device_msc_ufi_struct_t *ufi = NULL;
+    int err = USB_ERR;
 
-    error = usb_dev_msc_alloc_handle(&msc);
-    if (error != kStatus_USB_Success) {
-        return error;
+    err = usb_dev_msc_alloc_handle(&msc);
+    if (err) {
+        return err;
     }
 
-    error = usb_device_class_get_handle(controllerId, &msc->handle);
+    err = usb_device_class_get_handle(controllerId, &msc->handle);
 
-    if (error != kStatus_USB_Success) {
+    if (err) {
         usb_dev_msc_free_handle(msc);
-        return error;
+        return err;
     }
     if (!msc->handle) {
         usb_dev_msc_free_handle(msc);
-        return kStatus_USB_InvalidHandle;
+        return USB_INVALID_HANDLE;
     }
 
     msc->configurationStruct = config;
     msc->configuration = 0;
     msc->alternate = 0xff;
 
-    error = msc->configurationStruct->cb(
+    err = msc->configurationStruct->cb(
         (class_handle_t)msc, kUSB_DeviceMscEventGetLbaInformation, (void *)&diskInformation);
 
     if (((diskInformation.lengthOfEachLba) && (diskInformation.totalLbaNumberSupports)) == 0) {
-        error = kStatus_USB_Error;
+        err = USB_ERR;
         usb_dev_msc_free_handle(msc);
-        return error;
+        return err;
     }
 
     msc->logicalUnitNumber = diskInformation.logicalUnitNumberSupported;
@@ -568,37 +566,37 @@ usb_dev_msc_init(uint8_t controllerId, usb_dev_class_config_t *config, class_han
     msc->cswPrimeFlag = 0;
 
     *handle = (class_handle_t)msc;
-    return error;
+    return err;
 }
 
-usb_status_t
+int
 usb_dev_msc_deinit(class_handle_t handle)
 {
     usb_dev_msc_t *msc;
-    usb_status_t error = kStatus_USB_Error;
+    int err = USB_ERR;
 
     msc = (usb_dev_msc_t *)handle;
 
     if (!msc) {
-        return kStatus_USB_InvalidHandle;
+        return USB_INVALID_HANDLE;
     }
 
-    error = usb_dev_msc_eps_deinit(msc);
+    err = usb_dev_msc_eps_deinit(msc);
     usb_dev_msc_free_handle(msc);
-    return error;
+    return err;
 }
 
-usb_status_t
+int
 usb_dev_msc_event(void *handle, uint32_t event, void *param)
 {
-    usb_status_t error = kStatus_USB_Error;
+    int err = USB_ERR;
     usb_dev_msc_t *msc;
     uint16_t interfaceAlternate;
     uint8_t *temp8;
     uint8_t alternate;
 
     if (!param || !handle) {
-        return kStatus_USB_InvalidHandle;
+        return USB_INVALID_HANDLE;
     }
 
     msc = (usb_dev_msc_t *)handle;
@@ -616,11 +614,11 @@ usb_dev_msc_event(void *handle, uint32_t event, void *param)
         }
 
         if (msc->configuration) {
-            error = usb_dev_msc_eps_deinit(msc);
+            err = usb_dev_msc_eps_deinit(msc);
         }
         msc->configuration = *temp8;
         msc->alternate = 0;
-        error = usb_dev_msc_eps_init(msc);
+        err = usb_dev_msc_eps_init(msc);
         break;
     case kUSB_DeviceClassEventSetInterface:
         if (!msc->configurationStruct) {
@@ -636,10 +634,10 @@ usb_dev_msc_event(void *handle, uint32_t event, void *param)
             break;
         }
 
-        error = usb_dev_msc_eps_deinit(msc);
+        err = usb_dev_msc_eps_deinit(msc);
         msc->alternate = alternate;
 
-        error = usb_dev_msc_eps_init(msc);
+        err = usb_dev_msc_eps_init(msc);
         break;
 
     case kUSB_DeviceClassEventSetEndpointHalt:
@@ -649,11 +647,11 @@ usb_dev_msc_event(void *handle, uint32_t event, void *param)
         temp8 = (uint8_t *)param;
 
         if (msc->inEndpointStallFlag == 0 && *temp8 == msc->bulkInEndpoint) {
-            error = usb_dev_ep_stall(msc->handle, *temp8);
+            err = usb_dev_ep_stall(msc->handle, *temp8);
             msc->inEndpointStallFlag = 1;
         }
         if (msc->outEndpointStallFlag == 0 && *temp8 == msc->bulkOutEndpoint) {
-            error = usb_dev_ep_stall(msc->handle, *temp8);
+            err = usb_dev_ep_stall(msc->handle, *temp8);
             msc->outEndpointStallFlag = 1;
         }
         break;
@@ -664,11 +662,11 @@ usb_dev_msc_event(void *handle, uint32_t event, void *param)
         }
         temp8 = ((uint8_t *)param);
         if (msc->inEndpointStallFlag == 1 && *temp8 == msc->bulkInEndpoint) {
-            error = usb_dev_ep_unstall(msc->handle, *temp8);
+            err = usb_dev_ep_unstall(msc->handle, *temp8);
             msc->inEndpointStallFlag = 0;
         }
         if (msc->outEndpointStallFlag == 1 && *temp8 == msc->bulkOutEndpoint) {
-            error = usb_dev_ep_unstall(msc->handle, *temp8);
+            err = usb_dev_ep_unstall(msc->handle, *temp8);
             msc->outEndpointStallFlag = 0;
         }
         if (((msc->stallStatus == USB_DEVICE_MSC_STALL_IN_CSW) ||
@@ -711,7 +709,7 @@ usb_dev_msc_event(void *handle, uint32_t event, void *param)
                     req->buf = &msc->logicalUnitNumber;
                     req->len = req->setup->wLength;
                 } else {
-                    error = kStatus_USB_InvalidRequest;
+                    err = USB_INVALID_REQ;
                 }
                 break;
 
@@ -719,14 +717,14 @@ usb_dev_msc_event(void *handle, uint32_t event, void *param)
                 if (req->setup->wIndex == msc->interfaceNumber &&
                     !req->setup->wValue && !req->setup->wLength &&
                     (req->setup->bmRequestType & USB_REQ_TYPE_DIR_MASK) == USB_REQ_TYPE_DIR_OUT) {
-                    error = usb_dev_msc_eps_deinit(msc);
-                    error = usb_dev_msc_eps_init(msc);
+                    err = usb_dev_msc_eps_deinit(msc);
+                    err = usb_dev_msc_eps_init(msc);
                     msc->outEndpointStallFlag = 1;
                     msc->inEndpointStallFlag = 1;
                     msc->performResetRecover = 0;
                     msc->performResetDoneFlag = 1;
                 } else {
-                    error = kStatus_USB_InvalidRequest;
+                    err = USB_INVALID_REQ;
                 }
                 break;
 
@@ -740,14 +738,14 @@ usb_dev_msc_event(void *handle, uint32_t event, void *param)
         break;
     }
 
-    return error;
+    return err;
 }
 
-usb_status_t
+int
 usb_dev_msc_send(usb_dev_msc_t *msc)
 {
-    usb_status_t error = kStatus_USB_Success;
     usb_device_lba_app_struct_t lba;
+    int err = 0;
 
     lba.offset = msc->currentOffset;
     lba.size = (msc->bulkInBufferSize > USB_DEVICE_MSC_MAX_SEND_TRANSFER_LENGTH) ?
@@ -760,7 +758,7 @@ usb_dev_msc_send(usb_dev_msc_t *msc)
     msc->configurationStruct->cb((class_handle_t)msc, kUSB_DeviceMscEventReadRequest, &lba);
 
     if (msc->currentOffset < msc->totalLogicalBlockNumber) {
-        error = usb_device_send_req(msc->handle, msc->bulkInEndpoint, lba.buffer, lba.size);
+        err = usb_device_send_req(msc->handle, msc->bulkInEndpoint, lba.buffer, lba.size);
     } else {
         msc->needInStallFlag = 0;
         msc->inEndpointStallFlag = 1;
@@ -768,14 +766,14 @@ usb_dev_msc_send(usb_dev_msc_t *msc)
         msc->stallStatus = (uint8_t)USB_DEVICE_MSC_STALL_IN_DATA;
         usb_dev_ep_stall(msc->handle, msc->bulkInEndpoint);
     }
-    return error;
+    return err;
 }
 
-usb_status_t
+int
 usb_dev_msc_recv(usb_dev_msc_t *msc)
 {
-    usb_status_t err = kStatus_USB_Success;
     usb_device_lba_app_struct_t lba;
+    int err = 0;
 
     lba.offset = msc->currentOffset;
     lba.size = (msc->bulkOutBufferSize > USB_DEVICE_MSC_MAX_RECV_TRANSFER_LENGTH) ?
@@ -799,11 +797,11 @@ usb_dev_msc_recv(usb_dev_msc_t *msc)
     return err;
 }
 
-usb_status_t
+int
 USB_DeviceMscLbaTransfer(usb_dev_msc_t *msc, uint8_t dir,
                          usb_lba_transfer_information_struct_t *lba_info_ptr)
 {
-    usb_status_t err = kStatus_USB_Success;
+    int err = 0;
 
     msc->transferRemaining = lba_info_ptr->transferNumber * msc->lengthOfEachLba;
     msc->currentOffset = lba_info_ptr->startingLogicalBlockAddress;

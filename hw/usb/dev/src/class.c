@@ -180,11 +180,11 @@ static const usb_device_class_map_t s_UsbDeviceClassInterfaceMap[] = {
 
 static usb_device_common_class_t s_UsbDeviceCommonClassStruct[MYNEWT_VAL(USB_DEVICE_CONFIG_NUM)];
 
-static usb_status_t
+static int
 usb_device_class_alloc_handle(uint8_t ctrl_id, usb_device_common_class_t **handle)
 {
     int i;
-    usb_status_t err = kStatus_USB_Busy;
+    int err = USB_BUSY;
     os_sr_t sr;
 
     OS_ENTER_CRITICAL(sr);
@@ -193,7 +193,7 @@ usb_device_class_alloc_handle(uint8_t ctrl_id, usb_device_common_class_t **handl
     for (i = 0; i < MYNEWT_VAL(USB_DEVICE_CONFIG_NUM); i++) {
         if (s_UsbDeviceCommonClassStruct[i].handle &&
             s_UsbDeviceCommonClassStruct[i].ctrl_id == ctrl_id) {
-            err = kStatus_USB_Error;
+            err = USB_ERR;
             goto out;
         }
     }
@@ -203,7 +203,7 @@ usb_device_class_alloc_handle(uint8_t ctrl_id, usb_device_common_class_t **handl
         if (!s_UsbDeviceCommonClassStruct[i].handle) {
             s_UsbDeviceCommonClassStruct[i].ctrl_id = ctrl_id;
             *handle = &s_UsbDeviceCommonClassStruct[i];
-            err = kStatus_USB_Success;
+            err = 0;
             goto out;
         }
     }
@@ -213,7 +213,7 @@ out:
     return err;
 }
 
-static usb_status_t
+static int
 usb_device_class_free_handle(uint8_t ctrl_id)
 {
     int i;
@@ -228,15 +228,15 @@ usb_device_class_free_handle(uint8_t ctrl_id)
             s_UsbDeviceCommonClassStruct[i].configs = NULL;
             s_UsbDeviceCommonClassStruct[i].ctrl_id = 0;
             OS_EXIT_CRITICAL(sr);
-            return kStatus_USB_Success;
+            return 0;
         }
     }
 
     OS_EXIT_CRITICAL(sr);
-    return kStatus_USB_InvalidParameter;
+    return USB_INVALID_PARAM;
 }
 
-static usb_status_t
+static int
 usb_device_class_handle_by_id(uint8_t ctrl_id, usb_device_common_class_t **handle)
 {
     int i;
@@ -248,15 +248,15 @@ usb_device_class_handle_by_id(uint8_t ctrl_id, usb_device_common_class_t **handl
             s_UsbDeviceCommonClassStruct[i].ctrl_id == ctrl_id) {
             *handle = &s_UsbDeviceCommonClassStruct[i];
             OS_EXIT_CRITICAL(sr);
-            return kStatus_USB_Success;
+            return 0;
         }
     }
 
     OS_EXIT_CRITICAL(sr);
-    return kStatus_USB_InvalidParameter;
+    return USB_INVALID_PARAM;
 }
 
-static usb_status_t
+static int
 usb_device_class_handle_by_device(usb_device_handle device,
                                   usb_device_common_class_t **handle)
 {
@@ -268,15 +268,15 @@ usb_device_class_handle_by_device(usb_device_handle device,
         if (s_UsbDeviceCommonClassStruct[i].handle == device) {
             *handle = &s_UsbDeviceCommonClassStruct[i];
             OS_EXIT_CRITICAL(sr);
-            return kStatus_USB_Success;
+            return 0;
         }
     }
 
     OS_EXIT_CRITICAL(sr);
-    return kStatus_USB_InvalidParameter;
+    return USB_INVALID_PARAM;
 }
 
-usb_status_t
+int
 usb_device_class_get_handle(uint8_t ctrl_id, usb_device_handle *handle)
 {
     int32_t i;
@@ -288,31 +288,31 @@ usb_device_class_get_handle(uint8_t ctrl_id, usb_device_handle *handle)
             s_UsbDeviceCommonClassStruct[i].ctrl_id == ctrl_id) {
             *handle = s_UsbDeviceCommonClassStruct[i].handle;
             OS_EXIT_CRITICAL(sr);
-            return kStatus_USB_Success;
+            return 0;
         }
     }
     OS_EXIT_CRITICAL(sr);
-    return kStatus_USB_InvalidParameter;
+    return USB_INVALID_PARAM;
 }
 
-usb_status_t
+int
 usb_device_class_event(usb_device_handle handle, usb_device_class_event_t event, void *param)
 {
     usb_device_common_class_t *classHandle;
     uint8_t mapIndex;
     uint8_t mapLen;
     uint8_t classIndex;
-    usb_status_t rc = kStatus_USB_Error;
-    usb_status_t err = kStatus_USB_Error;
+    int rc = USB_ERR;
+    int err = USB_ERR;
 
     if (!param) {
-        return kStatus_USB_InvalidParameter;
+        return USB_INVALID_PARAM;
     }
 
     /* Get the common class handle according to the device handle. */
     rc = usb_device_class_handle_by_device(handle, &classHandle);
-    if (rc != kStatus_USB_Success) {
-        return kStatus_USB_InvalidParameter;
+    if (rc) {
+        return USB_INVALID_PARAM;
     }
 
     mapLen = sizeof(s_UsbDeviceClassInterfaceMap) / sizeof(s_UsbDeviceClassInterfaceMap[0]);
@@ -323,14 +323,13 @@ usb_device_class_event(usb_device_handle handle, usb_device_class_event_t event,
                 rc = s_UsbDeviceClassInterfaceMap[mapIndex].cb(
                     (void *)classHandle->configs->config[classIndex].handle,
                     event, param);
-                if (rc == kStatus_USB_InvalidRequest) {
-                    return kStatus_USB_InvalidRequest;
-                }
-                /* For composite device, it should return kStatus_USB_Success
-                 * once a valid request has been handled
-                 */
-                else if (rc == kStatus_USB_Success) {
-                    err = kStatus_USB_Success;
+                if (rc == USB_INVALID_REQ) {
+                    return USB_INVALID_REQ;
+                } else if (!rc) {
+                    /* For composite device, it should return kStatus_USB_Success
+                     * once a valid request has been handled
+                     */
+                    err = 0;
                 }
                 break;
             }
@@ -340,11 +339,11 @@ usb_device_class_event(usb_device_handle handle, usb_device_class_event_t event,
     return err;
 }
 
-usb_status_t
+int
 usb_device_class_cb(usb_device_handle handle, uint32_t event, void *param)
 {
     usb_device_common_class_t *classHandle;
-    usb_status_t err = kStatus_USB_Error;
+    int err = USB_ERR;
 
     err = usb_device_class_handle_by_device(handle, &classHandle);
     if (err) {
@@ -359,18 +358,18 @@ usb_device_class_cb(usb_device_handle handle, uint32_t event, void *param)
     return classHandle->configs->deviceCallback(handle, event, param);
 }
 
-usb_status_t
+int
 usb_device_class_init(uint8_t ctrl_id, usb_dev_class_configs_t *configs,
         usb_device_handle *handle)
 {
     usb_device_common_class_t *classHandle;
-    usb_status_t err = kStatus_USB_Error;
+    int err = USB_ERR;
     uint8_t mapIndex;
     uint8_t mapLen;
     uint8_t classIndex;
 
     if (!handle || !configs || !configs->deviceCallback) {
-        return kStatus_USB_InvalidParameter;
+        return USB_INVALID_PARAM;
     }
 
     err = usb_device_class_alloc_handle(ctrl_id, &classHandle);
@@ -380,7 +379,7 @@ usb_device_class_init(uint8_t ctrl_id, usb_dev_class_configs_t *configs,
 
     classHandle->configs = configs;
     err = usb_dev_init(ctrl_id, usb_device_class_cb, &classHandle->handle);
-    if (err != kStatus_USB_Success) {
+    if (err) {
         usb_device_deinit(classHandle->handle);
         usb_device_class_free_handle(ctrl_id);
         return err;
@@ -403,17 +402,17 @@ usb_device_class_init(uint8_t ctrl_id, usb_dev_class_configs_t *configs,
     return err;
 }
 
-usb_status_t
+int
 usb_device_class_deinit(uint8_t ctrl_id)
 {
     usb_device_common_class_t *classHandle;
-    usb_status_t err = kStatus_USB_Error;
+    int err = USB_ERR;
     uint8_t mapIndex;
     uint8_t mapLen;
     uint8_t classIndex;
 
     err = usb_device_class_handle_by_id(ctrl_id, &classHandle);
-    if (err != kStatus_USB_Success) {
+    if (err) {
         return err;
     }
 
@@ -437,11 +436,11 @@ usb_device_class_deinit(uint8_t ctrl_id)
     return err;
 }
 
-usb_status_t
+int
 usb_device_class_get_speed(uint8_t ctrl_id, uint8_t *speed)
 {
     usb_device_common_class_t *classHandle;
-    usb_status_t err = kStatus_USB_Error;
+    int err = USB_ERR;
 
     err = usb_device_class_handle_by_id(ctrl_id, &classHandle);
     if (!err) {

@@ -31,6 +31,9 @@
 #ifndef __USB_DEVICE_HID_H__
 #define __USB_DEVICE_HID_H__
 
+#include <stdint.h>
+#include <usb/usb.h>
+
 #define USB_DEVICE_CONFIG_HID_CLASS_CODE                   0x03
 
 #define USB_DEVICE_HID_REQUEST_GET_REPORT                  0x01
@@ -114,13 +117,12 @@ typedef struct
 extern "C" {
 #endif
 
-usb_status_t usb_dev_hid_init(uint8_t controllerId,
-                              usb_dev_class_config_t *config,
-                              class_handle_t *handle);
-usb_status_t usb_dev_hid_deinit(class_handle_t handle);
-usb_status_t usb_dev_hid_event(void *handle, uint32_t event, void *param);
-usb_status_t usb_dev_hid_send(class_handle_t handle, uint8_t ep, uint8_t *buffer, uint32_t length);
-usb_status_t usb_dev_hid_recv(class_handle_t handle, uint8_t ep, uint8_t *buffer, uint32_t length);
+int usb_dev_hid_init(uint8_t controllerId, usb_dev_class_config_t *config,
+        class_handle_t *handle);
+int usb_dev_hid_deinit(class_handle_t handle);
+int usb_dev_hid_event(void *handle, uint32_t event, void *param);
+int usb_dev_hid_send(class_handle_t handle, uint8_t ep, uint8_t *buf, uint32_t len);
+int usb_dev_hid_recv(class_handle_t handle, uint8_t ep, uint8_t *buf, uint32_t len);
 
 #if defined(__cplusplus)
 }

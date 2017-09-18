@@ -175,10 +175,8 @@ typedef struct _usb_cdc_acm_info
     uint16_t uartState;
 } usb_cdc_acm_info_t;
 
-static usb_status_t usb_device_cdc_cb(class_handle_t handle, uint32_t event,
-        void *param);
-static usb_status_t usb_device_cb(usb_device_handle handle, uint32_t event,
-        void *param);
+static int usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param);
+static int usb_device_cb(usb_device_handle handle, uint32_t event, void *param);
 
 extern usb_dev_ep_t g_UsbDeviceCdcVcomDicEndpoints[];
 usb_cdc_vcom_t s_cdc_vcom;
@@ -489,62 +487,62 @@ usb_language_list_t g_UsbDeviceLanguageList = {
     USB_DEVICE_LANGUAGE_COUNT,
 };
 
-static usb_status_t
+static int
 USB_DeviceGetDeviceDescriptor(usb_device_handle handle,
         usb_device_get_device_descriptor_struct_t *deviceDescriptor)
 {
     deviceDescriptor->buffer = g_UsbDeviceDescriptor;
     deviceDescriptor->length = USB_DESCRIPTOR_LENGTH_DEVICE;
     //printf("ok\n");
-    return kStatus_USB_Success;
+    return 0;
 }
 
-static usb_status_t
+static int
 USB_DeviceGetConfigurationDescriptor(usb_device_handle handle,
         usb_device_get_configuration_descriptor_struct_t *configurationDescriptor)
 {
     if (USB_CDC_VCOM_CONFIGURE_INDEX > configurationDescriptor->configuration) {
         configurationDescriptor->buffer = g_UsbDeviceConfigurationDescriptor;
         configurationDescriptor->length = USB_DESCRIPTOR_LENGTH_CONFIGURATION_ALL;
-        return kStatus_USB_Success;
+        return 0;
     }
 
-    return kStatus_USB_InvalidRequest;
+    return USB_INVALID_REQ;
 }
 
-static usb_status_t
+static int
 USB_DeviceGetStringDescriptor(usb_device_handle handle,
-        usb_device_get_string_descriptor_struct_t *stringDescriptor)
+        usb_dev_get_string_desc_t *stringDescriptor)
 {
+    uint8_t langid = 0;
+    uint8_t langidx = USB_DEVICE_STRING_COUNT;
+
     if (!stringDescriptor->stringIndex) {
         stringDescriptor->buffer = (uint8_t *)g_UsbDeviceLanguageList.languageString;
         stringDescriptor->length = g_UsbDeviceLanguageList.stringLength;
     } else {
-        uint8_t languageId = 0;
-        uint8_t languageIndex = USB_DEVICE_STRING_COUNT;
-
-        for (; languageId < USB_DEVICE_LANGUAGE_COUNT; languageId++) {
-            if (stringDescriptor->languageId == g_UsbDeviceLanguageList.languageList[languageId].languageId) {
+        for (; langid < USB_DEVICE_LANGUAGE_COUNT; langid++) {
+            if (stringDescriptor->languageId == g_UsbDeviceLanguageList.languageList[langid].languageId) {
                 if (stringDescriptor->stringIndex < USB_DEVICE_STRING_COUNT) {
-                    languageIndex = stringDescriptor->stringIndex;
+                    langidx = stringDescriptor->stringIndex;
                 }
                 break;
             }
         }
 
-        if (languageIndex == USB_DEVICE_STRING_COUNT) {
-            return kStatus_USB_InvalidRequest;
+        if (langidx == USB_DEVICE_STRING_COUNT) {
+            return USB_INVALID_REQ;
         }
-        stringDescriptor->buffer = (uint8_t *)g_UsbDeviceLanguageList.languageList[languageId].string[languageIndex];
-        stringDescriptor->length = g_UsbDeviceLanguageList.languageList[languageId].length[languageIndex];
+        stringDescriptor->buffer = (uint8_t *)g_UsbDeviceLanguageList.languageList[langid].string[langidx];
+        stringDescriptor->length = g_UsbDeviceLanguageList.languageList[langid].length[langidx];
     }
 
-    return kStatus_USB_Success;
+    return 0;
 }
 
 //FIXME: this is only need for high speed, check later
 #if 0
-static usb_status_t
+static int
 USB_DeviceSetSpeed(usb_device_handle handle, uint8_t speed)
 {
     int i;
@@ -600,7 +598,7 @@ USB_DeviceSetSpeed(usb_device_handle handle, uint8_t speed)
             FS_CDC_VCOM_BULK_OUT_PACKET_SIZE;
     }
 
-    return kStatus_USB_Success;
+    return 0;
 }
 #endif
 
@@ -609,10 +607,10 @@ volatile static uint8_t s_waitForDataReceive = 0;
 volatile static uint8_t s_comOpen = 0;
 #endif
 
-static usb_status_t
+static int
 usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
 {
-    usb_status_t err = kStatus_USB_Error;
+    int err = USB_ERR;
     uint32_t len;
     uint16_t *uartBitmap;
     usb_cdc_acm_info_t *acmInfo = &s_usbCdcAcmInfo;
@@ -786,10 +784,10 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
     return err;
 }
 
-static usb_status_t
+static int
 usb_device_cb(usb_device_handle handle, uint32_t event, void *param)
 {
-    usb_status_t err = kStatus_USB_Error;
+    int err = USB_ERR;
 
     //printf("event=%lu\n", event);
     switch (event) {
@@ -798,7 +796,7 @@ usb_device_cb(usb_device_handle handle, uint32_t event, void *param)
 
 #if 0 //FIXME: need for high speed?
 #if defined(USB_DEVICE_CONFIG_EHCI)
-        if (USB_DeviceClassGetSpeed(CONTROLLER_ID, &s_cdc_vcom.speed) == kStatus_USB_Success) {
+        if (!USB_DeviceClassGetSpeed(CONTROLLER_ID, &s_cdc_vcom.speed)) {
             USB_DeviceSetSpeed(handle, s_cdc_vcom.speed);
         }
 #endif
@@ -843,7 +841,7 @@ usb_device_cb(usb_device_handle handle, uint32_t event, void *param)
     case kUSB_DeviceEventGetStringDescriptor:
         if (param) {
             err = USB_DeviceGetStringDescriptor(handle,
-                    (usb_device_get_string_descriptor_struct_t *)param);
+                    (usb_dev_get_string_desc_t *)param);
         }
         break;
     }
@@ -854,7 +852,7 @@ usb_device_cb(usb_device_handle handle, uint32_t event, void *param)
 static void
 usb_device_application_init(void)
 {
-    usb_status_t err;
+    int err;
 
     usb_hal_init_clocks();
     usb_hal_clear_memory();
@@ -884,7 +882,7 @@ usb_device_application_init(void)
 static void
 usb_app_task_handler(void *arg)
 {
-    usb_status_t err = kStatus_USB_Error;
+    int err = USB_ERR;
     uint8_t last_attach = s_cdc_vcom.attach;
     int i;
 

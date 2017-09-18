@@ -119,9 +119,8 @@ typedef struct
     uint8_t                        configurations;
 } usb_dev_class_t;
 
-typedef usb_status_t (*usb_dev_class_cb_fn)(class_handle_t classHandle,
-                                            uint32_t callbackEvent,
-                                            void *eventParam);
+typedef int (*usb_dev_class_cb_fn)(class_handle_t class_handle,
+        uint32_t cb_event, void *param);
 
 typedef struct
 {
@@ -208,7 +207,7 @@ typedef struct
     uint32_t length;
     uint16_t languageId;
     uint8_t  stringIndex;
-} usb_device_get_string_descriptor_struct_t;
+} usb_dev_get_string_desc_t;
 
 typedef struct
 {
@@ -240,7 +239,7 @@ typedef union
                                               deviceQualifierDescriptor;
     usb_device_get_configuration_descriptor_struct_t
                                               configurationDescriptor;
-    usb_device_get_string_descriptor_struct_t stringDescriptor;
+    usb_dev_get_string_desc_t stringDescriptor;
     usb_device_get_hid_descriptor_struct_t    hidDescriptor;
     usb_device_get_hid_report_descriptor_struct_t
                                               hidReportDescriptor;
@@ -248,12 +247,12 @@ typedef union
                                               hidPhysicalDescriptor;
 } usb_device_get_descriptor_common_union_t;
 
-typedef usb_status_t (*usb_dev_class_init_fn)(uint8_t ctrl_id,
+typedef int (*usb_dev_class_init_fn)(uint8_t ctrl_id,
         usb_dev_class_config_t *config, class_handle_t *handle);
 
-typedef usb_status_t (*usb_dev_class_deinit_fn)(class_handle_t handle);
+typedef int (*usb_dev_class_deinit_fn)(class_handle_t handle);
 
-typedef usb_status_t (*usb_dev_class_event_fn)(void *classHandle,
+typedef int (*usb_dev_class_event_fn)(void *classHandle,
         uint32_t event, void *param);
 
 typedef struct
@@ -277,16 +276,14 @@ typedef struct
 extern "C" {
 #endif
 
-usb_status_t usb_device_class_init(uint8_t ctrl_id,
-        usb_dev_class_configs_t *configs, usb_device_handle *handle);
-usb_status_t usb_device_class_deinit(uint8_t ctrl_id);
-usb_status_t usb_device_class_get_speed(uint8_t ctrl_id, uint8_t *speed);
-usb_status_t usb_device_class_event(usb_device_handle handle,
-        usb_device_class_event_t event, void *param);
-usb_status_t usb_device_class_cb(usb_device_handle handle, uint32_t event,
-        void *param);
-usb_status_t usb_device_class_get_handle(uint8_t ctrl_id,
+int usb_device_class_init(uint8_t ctrl_id, usb_dev_class_configs_t *configs,
         usb_device_handle *handle);
+int usb_device_class_deinit(uint8_t ctrl_id);
+int usb_device_class_get_speed(uint8_t ctrl_id, uint8_t *speed);
+int usb_device_class_event(usb_device_handle handle,
+        usb_device_class_event_t event, void *param);
+int usb_device_class_cb(usb_device_handle handle, uint32_t event, void *param);
+int usb_device_class_get_handle(uint8_t ctrl_id, usb_device_handle *handle);
 
 #if defined(__cplusplus)
 }
