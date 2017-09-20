@@ -178,9 +178,7 @@ _prime_next_setup(kinetis_usb_dev_state_t *state)
 {
     kinetis_usb_dev_ep_state_t *epstate = &state->epstate[0];
 
-#if defined(FSL_FEATURE_USB_KHCI_KEEP_ALIVE_ENABLED) && \
-    defined(USB_DEVICE_CONFIG_KEEP_ALIVE_MODE) && \
-    defined(FSL_FEATURE_USB_KHCI_USB_RAM)
+#if MYNEWT_VAL(USB_DEV_KEEP_ALIVE_MODE) && defined(FSL_FEATURE_USB_KHCI_USB_RAM)
     /* In case of lowpower mode enabled, it requires to put the setup packet buffer(16 bytes) into the USB RAM so
      * that the setup packet would wake up the USB.
      */
@@ -666,9 +664,7 @@ _kinetis_usb_init(uint8_t controllerId,
     regs->MISCCTRL |= USB_MISCCTRL_VREDG_EN_MASK | USB_MISCCTRL_VFEDG_EN_MASK;
 #endif
 
-#if defined(FSL_FEATURE_USB_KHCI_KEEP_ALIVE_ENABLED) && \
-    defined(USB_DEVICE_CONFIG_KEEP_ALIVE_MODE) && \
-    defined(FSL_FEATURE_USB_KHCI_USB_RAM)
+#if MYNEWT_VAL(USB_DEV_KEEP_ALIVE_MODE) && defined(FSL_FEATURE_USB_KHCI_USB_RAM)
     regs->CLK_RECOVER_CTRL |= USB_CLK_RECOVER_CTRL_CLOCK_RECOVER_EN_MASK;
     regs->KEEP_ALIVE_CTRL =
         USB_KEEP_ALIVE_CTRL_KEEP_ALIVE_EN_MASK |
@@ -1012,9 +1008,7 @@ kinetis_usb_dev_isr(void)
 
     status = regs->ISTAT;
 
-#if defined(FSL_FEATURE_USB_KHCI_KEEP_ALIVE_ENABLED) && \
-    defined(USB_DEVICE_CONFIG_KEEP_ALIVE_MODE) && \
-    defined(FSL_FEATURE_USB_KHCI_USB_RAM)
+#if MYNEWT_VAL(USB_DEV_KEEP_ALIVE_MODE) && defined(FSL_FEATURE_USB_KHCI_USB_RAM)
     if (regs->KEEP_ALIVE_CTRL & USB_KEEP_ALIVE_CTRL_WAKE_INT_STS_MASK) {
         regs->KEEP_ALIVE_CTRL |= USB_KEEP_ALIVE_CTRL_WAKE_INT_STS_MASK;
     }

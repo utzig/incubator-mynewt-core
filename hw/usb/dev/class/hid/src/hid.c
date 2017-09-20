@@ -71,6 +71,47 @@ static int USB_DeviceHidEndpointsDeinit(usb_dev_hid_t *hid);
 
 static usb_dev_hid_t s_UsbDeviceHidHandle[MYNEWT_VAL(USB_DEVICE_CONFIG_HID)];
 
+/* full speed device */
+#define DEVICE_RELEASE                                 0x0101
+
+uint8_t g_hid_device_descriptor[DESC_LEN_DEVICE] = {
+    DESC_LEN_DEVICE,
+    DESC_TYPE_DEVICE,
+    USB_SHORT_GET_LOW(USB_SPEC_RELEASE),
+    USB_SHORT_GET_HIGH(USB_SPEC_RELEASE),
+    /* HID class/subclass/protocol (TODO: add spec section) */
+    0, 0, 0,
+    /* max packet size */
+    64,
+#if MYNEWT_VAL(USB_VENDOR_ID)
+    (uint8_t)((uint16_t)MYNEWT_VAL(USB_VENDOR_ID) >> 8),
+    (uint8_t)MYNEWT_VAL(USB_VENDOR_ID),
+#else
+    #error "Missing USB_VENDOR_ID syscfg"
+#endif
+#if MYNEWT_VAL(USB_PRODUCT_ID)
+    (uint8_t)((uint16_t)MYNEWT_VAL(USB_PRODUCT_ID) >> 8),
+    (uint8_t)MYNEWT_VAL(USB_PRODUCT_ID),
+#else
+    #error "Missing USB_PRODUCT_ID syscfg"
+#endif
+#if MYNEWT_VAL(USB_DEVICE_RELEASE)
+    USB_SHORT_GET_LOW(MYNEWT_VAL(DEVICE_RELEASE)),
+    USB_SHORT_GET_HIGH(MYNEWT_VAL(DEVICE_RELEASE)),
+#else
+    USB_SHORT_GET_LOW(DEVICE_RELEASE),
+    USB_SHORT_GET_HIGH(DEVICE_RELEASE),
+#endif
+    0x01,
+    0x02,
+    0x00,
+#if MYNEWT_VAL(USB_DEVICE_CONFIGURATION_COUNT)
+    MYNEWT_VAL(USB_DEVICE_CONFIGURATION_COUNT),
+#else
+    1,
+#endif
+};
+
 static int
 usb_dev_hid_alloc_handle(usb_dev_hid_t **handle)
 {

@@ -67,6 +67,9 @@
 #define USB_XFER_STALL               -10
 #define USB_XFER_FAIL                -11
 
+/* For device descriptor */
+#define USB_SPEC_RELEASE                               0x0200
+
 typedef void *usb_host_handle;
 typedef void *usb_device_handle;
 typedef void *usb_otg_handle;

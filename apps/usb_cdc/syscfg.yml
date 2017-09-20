@@ -36,3 +36,8 @@ syscfg.vals:
     MCU_LITTLE_ENDIAN: 1
     USB_DEVICE_CONFIG_ENDPOINTS: 4
 
+    USB_VENDOR_ID: "0xc91f"
+    USB_PRODUCT_ID: "0x9200"
+
+    USB_DESC_STRING1: '"Apache Mynewt"'
+    USB_DESC_STRING2: '"USB CDC-ACM demo"'

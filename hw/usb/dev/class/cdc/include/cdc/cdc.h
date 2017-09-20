@@ -181,18 +181,18 @@
 
 typedef enum
 {
-    kUSB_DeviceCdcEventSendResponse = 0x01,
-    kUSB_DeviceCdcEventRecvResponse,
-    kUSB_DeviceCdcEventSerialStateNotif,
-    kUSB_DeviceCdcEventSendEncapsulatedCommand,
-    kUSB_DeviceCdcEventGetEncapsulatedResponse,
-    kUSB_DeviceCdcEventSetCommFeature,
-    kUSB_DeviceCdcEventGetCommFeature,
-    kUSB_DeviceCdcEventClearCommFeature,
-    kUSB_DeviceCdcEventGetLineCoding,
-    kUSB_DeviceCdcEventSetLineCoding,
-    kUSB_DeviceCdcEventSetControlLineState,
-    kUSB_DeviceCdcEventSendBreak,
+    CDC_EVT_SEND_RESPONSE = 0x01,
+    CDC_EVT_RECV_RESPONSE,
+    CDC_EVT_SERIAL_STATE_NOTIF,
+    CDC_EVT_SEND_ENCAPSULATED_COMMAND,
+    CDC_EVT_GET_ENCAPSULATED_RESPONSE,
+    CDC_EVT_SET_COMM_FEATURE,
+    CDC_EVT_GET_COMM_FEATURE,
+    CDC_EVT_CLEAR_COMM_FEATURE,
+    CDC_EVT_GET_LINE_CODING,
+    CDC_EVT_SET_LINE_CODING,
+    CDC_EVT_SET_CONTROL_LINE_STATE,
+    CDC_EVT_SEND_BREAK,
 } usb_dev_cdc_event_t;
 
 typedef struct
@@ -217,14 +217,16 @@ typedef struct
     usb_dev_class_config_t *config;
     usb_dev_itf_t *comm_itf;
     usb_dev_itf_t *data_itf;
-    usb_dev_cdc_pipe_t bulkIn;
-    usb_dev_cdc_pipe_t bulkOut;
-    usb_dev_cdc_pipe_t interruptIn;
+    usb_dev_cdc_pipe_t bulk_in;
+    usb_dev_cdc_pipe_t bulk_out;
+    usb_dev_cdc_pipe_t intr_in;
     uint8_t config_num;
     uint8_t itf_num;
     uint8_t alternate;
-    uint8_t hasSentState;
+    uint8_t has_sent;
 } usb_dev_cdc_t;
+
+extern uint8_t g_cdc_device_descriptor[DESC_LEN_DEVICE];
 
 #if defined(__cplusplus)
 extern "C" {

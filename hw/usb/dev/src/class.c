@@ -377,6 +377,11 @@ usb_device_class_init(uint8_t ctrl_id, usb_dev_class_configs_t *configs,
         return err;
     }
 
+    err = usb_desc_strings_alloc();
+    if (err) {
+        return err;
+    }
+
     classHandle->configs = configs;
     err = usb_dev_init(ctrl_id, usb_device_class_cb, &classHandle->handle);
     if (err) {

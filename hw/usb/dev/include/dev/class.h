@@ -178,74 +178,70 @@ typedef struct
 
 typedef struct
 {
-    uint8_t  *buffer;
-    uint32_t length;
-} usb_device_get_descriptor_common_struct_t;
+    uint8_t  *buf;
+    uint32_t len;
+} usb_desc_common_t;
 
 typedef struct
 {
-    uint8_t  *buffer;
-    uint32_t length;
-} usb_device_get_device_descriptor_struct_t;
+    uint8_t  *buf;
+    uint32_t len;
+} usb_desc_device_t;
 
 typedef struct
 {
-    uint8_t  *buffer;
-    uint32_t length;
-} usb_device_get_device_qualifier_descriptor_struct_t;
+    uint8_t  *buf;
+    uint32_t len;
+} usb_desc_device_qualifier_t;
 
 typedef struct
 {
-    uint8_t  *buffer;
-    uint32_t length;
-    uint8_t  configuration;
-} usb_device_get_configuration_descriptor_struct_t;
+    uint8_t  *buf;
+    uint32_t len;
+    uint8_t  config;
+} usb_desc_configuration_t;
 
 typedef struct
 {
-    uint8_t  *buffer;
-    uint32_t length;
-    uint16_t languageId;
-    uint8_t  stringIndex;
-} usb_dev_get_string_desc_t;
+    uint8_t  *buf;
+    uint32_t len;
+    uint16_t lang_id;
+    uint8_t  str_idx;
+} usb_desc_string_t;
 
 typedef struct
 {
-    uint8_t  *buffer;
-    uint32_t length;
-    uint8_t  interfaceNumber;
-} usb_device_get_hid_descriptor_struct_t;
+    uint8_t  *buf;
+    uint32_t len;
+    uint8_t  itf_num;
+} usb_desc_hid_t;
 
 typedef struct
 {
-    uint8_t  *buffer;
-    uint32_t length;
-    uint8_t  interfaceNumber;
-} usb_device_get_hid_report_descriptor_struct_t;
+    uint8_t  *buf;
+    uint32_t len;
+    uint8_t  itf_num;
+} usb_desc_hid_report_t;
 
 typedef struct
 {
-    uint8_t  *buffer;
-    uint32_t length;
-    uint8_t  index;
-    uint8_t  interfaceNumber;
-} usb_device_get_hid_physical_descriptor_struct_t;
+    uint8_t  *buf;
+    uint32_t len;
+    uint8_t  idx;
+    uint8_t  itf_num;
+} usb_desc_hid_physical_t;
 
 typedef union
 {
-    usb_device_get_descriptor_common_struct_t commonDescriptor;
-    usb_device_get_device_descriptor_struct_t deviceDescriptor;
-    usb_device_get_device_qualifier_descriptor_struct_t
-                                              deviceQualifierDescriptor;
-    usb_device_get_configuration_descriptor_struct_t
-                                              configurationDescriptor;
-    usb_dev_get_string_desc_t stringDescriptor;
-    usb_device_get_hid_descriptor_struct_t    hidDescriptor;
-    usb_device_get_hid_report_descriptor_struct_t
-                                              hidReportDescriptor;
-    usb_device_get_hid_physical_descriptor_struct_t
-                                              hidPhysicalDescriptor;
-} usb_device_get_descriptor_common_union_t;
+    usb_desc_common_t                 common_desc;
+    usb_desc_device_t                 device_desc;
+    usb_desc_device_qualifier_t       device_qualifier_desc;
+    usb_desc_configuration_t          configuration_desc;
+    usb_desc_string_t                 string_desc;
+    usb_desc_hid_t                    hid_desc;
+    usb_desc_hid_report_t             hid_report_desc;
+    usb_desc_hid_physical_t           hid_physical_desc;
+} usb_desc_t;
 
 typedef int (*usb_dev_class_init_fn)(uint8_t ctrl_id,
         usb_dev_class_config_t *config, class_handle_t *handle);
@@ -284,6 +280,13 @@ int usb_device_class_event(usb_device_handle handle,
         usb_device_class_event_t event, void *param);
 int usb_device_class_cb(usb_device_handle handle, uint32_t event, void *param);
 int usb_device_class_get_handle(uint8_t ctrl_id, usb_device_handle *handle);
+
+/*
+ * Helpers to work with descriptors.
+ */
+int usb_desc_get_string(usb_device_handle handle, usb_desc_string_t *desc);
+int usb_desc_strings_alloc(void);
+
 
 #if defined(__cplusplus)
 }

@@ -209,7 +209,7 @@ _usb_device_reset_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
     return 0;
 }
 
-#if MYNEWT_VAL(USB_DEVICE_CONFIG_LOW_POWER_MODE)
+#if MYNEWT_VAL(USB_DEV_LOW_POWER_MODE)
 static int
 _usb_device_suspend_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 {
@@ -250,7 +250,7 @@ _usb_device_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
     case kUSB_DeviceNotifyBusReset:
         err = _usb_device_reset_notification(dev, msg);
         break;
-#if MYNEWT_VAL(USB_DEVICE_CONFIG_LOW_POWER_MODE)
+#if MYNEWT_VAL(USB_DEV_LOW_POWER_MODE)
     case kUSB_DeviceNotifySuspend:
         err = _usb_device_suspend_notification(dev, msg);
         break;

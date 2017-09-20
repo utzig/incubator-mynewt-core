@@ -113,6 +113,8 @@ typedef struct
     uint8_t interruptOutPipeBusy;
 } usb_dev_hid_t;
 
+extern uint8_t g_hid_device_descriptor[DESC_LEN_DEVICE];
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

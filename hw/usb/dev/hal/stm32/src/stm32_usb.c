@@ -1001,7 +1001,7 @@ stm32_usb_dev_isr(void)
             /* Clear the Remote Wake-up Signaling */
             USBx_DEVICE->DCTL &= ~USB_OTG_DCTL_RWUSIG;
 
-#if MYNEWT_VAL(USB_DEVICE_CONFIG_LOW_POWER_MODE)
+#if MYNEWT_VAL(USB_DEV_LOW_POWER_MODE)
             if (usb->LPM_State == LPM_L1) {
                 usb->LPM_State = LPM_L0;
                 //FIXME: HAL_PCDEx_LPM_Callback(usb, PCD_LPM_L0_ACTIVE);
@@ -1017,7 +1017,7 @@ stm32_usb_dev_isr(void)
         /* Handle Suspend Interrupt */
         if (USB_ReadInterrupts(usb->Instance) & USB_OTG_GINTSTS_USBSUSP) {
             if (USBx_DEVICE->DSTS & USB_OTG_DSTS_SUSPSTS) {
-#if MYNEWT_VAL(USB_DEVICE_CONFIG_LOW_POWER_MODE)
+#if MYNEWT_VAL(USB_DEV_LOW_POWER_MODE)
                 _init_cb_msg_with_code(&msg, kUSB_DeviceNotifySuspend);
                 usb_dev_notify(usb->dev, &msg);
                 //g_suspend = g_counter++;
@@ -1029,7 +1029,7 @@ stm32_usb_dev_isr(void)
         /* Handle LPM Interrupt */
         if (USB_ReadInterrupts(usb->Instance) & USB_OTG_GINTSTS_LPMINT) {
             usb->Instance->GINTSTS = USB_OTG_GINTSTS_LPMINT;
-#if MYNEWT_VAL(USB_DEVICE_CONFIG_LOW_POWER_MODE)
+#if MYNEWT_VAL(USB_DEV_LOW_POWER_MODE)
             if (usb->LPM_State == LPM_L0) {
                 usb->LPM_State = LPM_L1;
                 usb->BESL = (usb->Instance->GLPMCFG & USB_OTG_GLPMCFG_BESL) >> 2;

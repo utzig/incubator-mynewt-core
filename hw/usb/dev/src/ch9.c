@@ -296,7 +296,7 @@ static int
 _usb_device_get_descriptor(usb_device_common_class_t *classHandle,
         usb_setup_t *setup, uint8_t **buf, uint32_t *len)
 {
-    usb_device_get_descriptor_common_union_t commonDescriptor;
+    usb_desc_t desc;
     uint8_t state;
     uint8_t type = setup->wValue >> 8;
     uint8_t index = setup->wValue & 0xff;
@@ -316,46 +316,46 @@ _usb_device_get_descriptor(usb_device_common_class_t *classHandle,
 
     //printf("type=%d, index=%d\n", type, index);
 
-    commonDescriptor.commonDescriptor.length = setup->wLength;
+    desc.common_desc.len = setup->wLength;
     switch (type) {
-    case USB_DESCRIPTOR_TYPE_DEVICE:
+    case DESC_TYPE_DEVICE:
         err = usb_device_class_cb(classHandle->handle,
                                   kUSB_DeviceEventGetDeviceDescriptor,
-                                  &commonDescriptor.deviceDescriptor);
+                                  &desc.device_desc);
         break;
-    case USB_DESCRIPTOR_TYPE_CONFIGURE:
-        commonDescriptor.configurationDescriptor.configuration = index;
+    case DESC_TYPE_CONFIGURE:
+        desc.configuration_desc.config = index;
         err = usb_device_class_cb(classHandle->handle,
                                   kUSB_DeviceEventGetConfigurationDescriptor,
-                                  &commonDescriptor.configurationDescriptor);
+                                  &desc.configuration_desc);
         break;
-    case USB_DESCRIPTOR_TYPE_STRING:
-        commonDescriptor.stringDescriptor.stringIndex = index;
-        commonDescriptor.stringDescriptor.languageId = setup->wIndex;
+    case DESC_TYPE_STRING:
+        desc.string_desc.str_idx = index;
+        desc.string_desc.lang_id = setup->wIndex;
         err = usb_device_class_cb(classHandle->handle,
                                   kUSB_DeviceEventGetStringDescriptor,
-                                  &commonDescriptor.stringDescriptor);
+                                  &desc.string_desc);
         break;
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_HID)
-    case USB_DESCRIPTOR_TYPE_HID:
-        commonDescriptor.hidDescriptor.interfaceNumber = setup->wIndex;
+    case DESC_TYPE_HID:
+        desc.hid_desc.itf_num = setup->wIndex;
         err = usb_device_class_cb(classHandle->handle,
                                   kUSB_DeviceEventGetHidDescriptor,
-                                  &commonDescriptor.hidDescriptor);
+                                  &desc.hid_desc);
         break;
-    case USB_DESCRIPTOR_TYPE_HID_REPORT:
-        commonDescriptor.hidReportDescriptor.interfaceNumber = setup->wIndex;
+    case DESC_TYPE_HID_REPORT:
+        desc.hid_report_desc.itf_num = setup->wIndex;
         err = usb_device_class_cb(classHandle->handle,
                                   kUSB_DeviceEventGetHidReportDescriptor,
-                                  &commonDescriptor.hidReportDescriptor);
+                                  &desc.hid_report_desc);
         break;
-    case USB_DESCRIPTOR_TYPE_HID_PHYSICAL:
-        commonDescriptor.hidPhysicalDescriptor.index = index;
-        commonDescriptor.hidPhysicalDescriptor.interfaceNumber = setup->wIndex;
+    case DESC_TYPE_HID_PHYSICAL:
+        desc.hid_physical_desc.idx = index;
+        desc.hid_physical_desc.itf_num = setup->wIndex;
         err = usb_device_class_cb(classHandle->handle,
                                   kUSB_DeviceEventGetHidPhysicalDescriptor,
-                                  &commonDescriptor.hidPhysicalDescriptor);
+                                  &desc.hid_physical_desc);
         break;
 #endif
 
@@ -363,10 +363,10 @@ _usb_device_get_descriptor(usb_device_common_class_t *classHandle,
         break;
     }
 
-    *buf = commonDescriptor.commonDescriptor.buffer;
-    *len = commonDescriptor.commonDescriptor.length;
+    *buf = desc.common_desc.buf;
+    *len = desc.common_desc.len;
 
-    //printf("*length=%ld\n", *length);
+    //printf("*len=%ld\n", *len);
 
     return err;
 }

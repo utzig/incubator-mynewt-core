@@ -61,6 +61,46 @@
 //FIXME: make dynamic
 usb_dev_cdc_t g_cdc[USB_DEVICE_CONFIG_CDC_ACM_MAX_INSTANCE];
 
+/* full speed device */
+#define DEVICE_RELEASE                                 0x0101
+#define USB_DEVICE_CLASS                               0x02
+#define USB_DEVICE_SUBCLASS                            0x00
+#define USB_DEVICE_PROTOCOL                            0x00
+
+uint8_t g_cdc_device_descriptor[DESC_LEN_DEVICE] = {
+    DESC_LEN_DEVICE,
+    DESC_TYPE_DEVICE,
+    USB_SHORT_GET_LOW(USB_SPEC_RELEASE),
+    USB_SHORT_GET_HIGH(USB_SPEC_RELEASE),
+    USB_DEVICE_CLASS,
+    USB_DEVICE_SUBCLASS,
+    USB_DEVICE_PROTOCOL,
+    /* max packet size */
+    64,
+#if MYNEWT_VAL(USB_VENDOR_ID)
+    (uint8_t)((uint16_t)MYNEWT_VAL(USB_VENDOR_ID) >> 8),
+    (uint8_t)MYNEWT_VAL(USB_VENDOR_ID),
+#else
+    #error "Missing USB_VENDOR_ID syscfg"
+#endif
+#if MYNEWT_VAL(USB_PRODUCT_ID)
+    (uint8_t)((uint16_t)MYNEWT_VAL(USB_PRODUCT_ID) >> 8),
+    (uint8_t)MYNEWT_VAL(USB_PRODUCT_ID),
+#else
+    #error "Missing USB_PRODUCT_ID syscfg"
+#endif
+    USB_SHORT_GET_LOW(DEVICE_RELEASE),
+    USB_SHORT_GET_HIGH(DEVICE_RELEASE),
+    0x01,
+    0x02,
+    0x00,
+#if MYNEWT_VAL(USB_DEVICE_CONFIGURATION_COUNT)
+    MYNEWT_VAL(USB_DEVICE_CONFIGURATION_COUNT),
+#else
+    1,
+#endif
+};
+
 static int
 usb_dev_cdc_alloc_handle(usb_dev_cdc_t **handle)
 {
@@ -97,10 +137,9 @@ usb_dev_cdc_interrupt_in(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg,
         return USB_INVALID_HANDLE;
     }
 
-    cdc->interruptIn.is_busy = false;
+    cdc->intr_in.is_busy = false;
     if (cdc->config && cdc->config->cb) {
-        return cdc->config->cb((class_handle_t)cdc,
-                kUSB_DeviceCdcEventSerialStateNotif, msg);
+        return cdc->config->cb((class_handle_t)cdc, CDC_EVT_SERIAL_STATE_NOTIF, msg);
     }
 
     return USB_ERR;
@@ -117,10 +156,9 @@ usb_dev_cdc_bulk_in(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg,
         return USB_INVALID_HANDLE;
     }
 
-    cdc->bulkIn.is_busy = false;
+    cdc->bulk_in.is_busy = false;
     if (cdc->config && cdc->config->cb) {
-        return cdc->config->cb(
-            (class_handle_t) cdc, kUSB_DeviceCdcEventSendResponse, msg);
+        return cdc->config->cb((class_handle_t)cdc, CDC_EVT_SEND_RESPONSE, msg);
     }
 
     return USB_ERR;
@@ -137,10 +175,9 @@ usb_dev_cdc_bulk_out(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg,
         return USB_INVALID_HANDLE;
     }
 
-    cdc->bulkOut.is_busy = false;
+    cdc->bulk_out.is_busy = false;
     if (cdc->config && cdc->config->cb) {
-        return cdc->config->cb((class_handle_t)cdc,
-                kUSB_DeviceCdcEventRecvResponse, msg);
+        return cdc->config->cb((class_handle_t)cdc, CDC_EVT_RECV_RESPONSE, msg);
     }
 
     return USB_ERR;
@@ -191,8 +228,8 @@ usb_dev_cdc_endpoints_init(usb_dev_cdc_t *cdc)
 
         dir = USB_EP_DIR(epInitStruct.endpointAddress);
         if (dir == USB_IN && epInitStruct.transferType == USB_ENDPOINT_INTERRUPT) {
-            cdc->interruptIn.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
-            cdc->interruptIn.is_busy = false;
+            cdc->intr_in.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
+            cdc->intr_in.is_busy = false;
             ep_cb.fn = usb_dev_cdc_interrupt_in;
         }
 
@@ -226,12 +263,12 @@ usb_dev_cdc_endpoints_init(usb_dev_cdc_t *cdc)
 
         dir = USB_EP_DIR(epInitStruct.endpointAddress);
         if (dir == USB_IN && epInitStruct.transferType == USB_ENDPOINT_BULK) {
-            cdc->bulkIn.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
-            cdc->bulkIn.is_busy = false;
+            cdc->bulk_in.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
+            cdc->bulk_in.is_busy = false;
             ep_cb.fn = usb_dev_cdc_bulk_in;
         } else if (dir == USB_OUT && epInitStruct.transferType == USB_ENDPOINT_BULK) {
-            cdc->bulkOut.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
-            cdc->bulkOut.is_busy = false;
+            cdc->bulk_out.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
+            cdc->bulk_out.is_busy = false;
             ep_cb.fn = usb_dev_cdc_bulk_out;
         }
         ep_cb.param = cdc;
@@ -286,7 +323,7 @@ usb_dev_cdc_event(void *handle, uint32_t event, void *param)
         cdc->config_num = 0;
         break;
     case kUSB_DeviceClassEventSetConfiguration:
-        temp8 = ((uint8_t *)param);
+        temp8 = (uint8_t *)param;
         if (!cdc->config) {
             break;
         }
@@ -374,41 +411,16 @@ usb_dev_cdc_event(void *handle, uint32_t event, void *param)
                 reqParam.setupValue = req->setup->wValue;
                 reqParam.isSetup = req->is_setup;
                 switch (req->setup->bRequest) {
-                case USB_DEVICE_CDC_REQUEST_SEND_ENCAPSULATED_COMMAND:
-                    err = cdc->config->cb((class_handle_t)cdc,
-                            kUSB_DeviceCdcEventSendEncapsulatedCommand, &reqParam);
-                    break;
-                case USB_DEVICE_CDC_REQUEST_GET_ENCAPSULATED_RESPONSE:
-                    err = cdc->config->cb((class_handle_t)cdc,
-                            kUSB_DeviceCdcEventGetEncapsulatedResponse, &reqParam);
-                    break;
-                case USB_DEVICE_CDC_REQUEST_SET_COMM_FEATURE:
-                    err = cdc->config->cb((class_handle_t)cdc,
-                            kUSB_DeviceCdcEventSetCommFeature, &reqParam);
-                    break;
-                case USB_DEVICE_CDC_REQUEST_GET_COMM_FEATURE:
-                    err = cdc->config->cb((class_handle_t)cdc,
-                            kUSB_DeviceCdcEventGetCommFeature, &reqParam);
-                    break;
-                case USB_DEVICE_CDC_REQUEST_CLEAR_COMM_FEATURE:
-                    err = cdc->config->cb((class_handle_t)cdc,
-                            kUSB_DeviceCdcEventClearCommFeature, &reqParam);
-                    break;
-                case USB_DEVICE_CDC_REQUEST_GET_LINE_CODING:
-                    err = cdc->config->cb((class_handle_t)cdc,
-                            kUSB_DeviceCdcEventGetLineCoding, &reqParam);
-                    break;
-                case USB_DEVICE_CDC_REQUEST_SET_LINE_CODING:
-                    err = cdc->config->cb((class_handle_t)cdc,
-                            kUSB_DeviceCdcEventSetLineCoding, &reqParam);
-                    break;
-                case USB_DEVICE_CDC_REQUEST_SET_CONTROL_LINE_STATE:
-                    err = cdc->config->cb((class_handle_t)cdc,
-                            kUSB_DeviceCdcEventSetControlLineState, &reqParam);
-                    break;
+                case USB_DEVICE_CDC_REQUEST_SEND_ENCAPSULATED_COMMAND: /* fallthrough */
+                case USB_DEVICE_CDC_REQUEST_GET_ENCAPSULATED_RESPONSE: /* fallthrough */
+                case USB_DEVICE_CDC_REQUEST_SET_COMM_FEATURE:          /* fallthrough */
+                case USB_DEVICE_CDC_REQUEST_GET_COMM_FEATURE:          /* fallthrough */
+                case USB_DEVICE_CDC_REQUEST_CLEAR_COMM_FEATURE:        /* fallthrough */
+                case USB_DEVICE_CDC_REQUEST_GET_LINE_CODING:           /* fallthrough */
+                case USB_DEVICE_CDC_REQUEST_SET_LINE_CODING:           /* fallthrough */
+                case USB_DEVICE_CDC_REQUEST_SET_CONTROL_LINE_STATE:    /* fallthrough */
                 case USB_DEVICE_CDC_REQUEST_SEND_BREAK:
-                    err = cdc->config->cb((class_handle_t)cdc,
-                            kUSB_DeviceCdcEventSendBreak, &reqParam);
+                    err = cdc->config->cb((class_handle_t)cdc, req->setup->bRequest, &reqParam);
                     break;
                 default:
                     err = USB_INVALID_REQ;
@@ -448,16 +460,13 @@ usb_dev_cdc_init(uint8_t ctrl_id, usb_dev_class_config_t *config,
     cdc->alternate = 0xFF;
 
 #if 0
-    if (kStatus_USB_OSA_Success !=
-        USB_OsaMutexCreate(&(cdc->bulkIn.mutex))) {
+    if (USB_OsaMutexCreate(&cdc->bulk_in.mutex)) {
         usb_echo("mutex create error!");
     }
-    if (kStatus_USB_OSA_Success !=
-        USB_OsaMutexCreate(&(cdc->bulkOut.mutex))) {
+    if (USB_OsaMutexCreate(&cdc->bulk_out.mutex)) {
         usb_echo("mutex create error!");
     }
-    if (kStatus_USB_OSA_Success !=
-        USB_OsaMutexCreate(&(cdc->interruptIn.mutex))) {
+    if (USB_OsaMutexCreate(&cdc->intr_in.mutex)) {
         usb_echo("mutex create error!");
     }
 #endif
@@ -480,13 +489,13 @@ usb_dev_cdc_deinit(class_handle_t handle)
     //FIXME: seems like mutexes are not really needed...
 #if 0
     //FIXME: log errors below
-    if (USB_OsaMutexDestroy(cdc->bulkIn.mutex) != kStatus_USB_OSA_Success) {
+    if (USB_OsaMutexDestroy(cdc->bulk_in.mutex)) {
         usb_echo("mutex destroy error!");
     }
-    if (USB_OsaMutexDestroy(cdc->bulkOut.mutex) != kStatus_USB_OSA_Success) {
+    if (USB_OsaMutexDestroy(cdc->bulk_out.mutex)) {
         usb_echo("mutex destroy error!");
     }
-    if (USB_OsaMutexDestroy(cdc->interruptIn.mutex) != kStatus_USB_OSA_Success) {
+    if (USB_OsaMutexDestroy(cdc->intr_in.mutex)) {
         usb_echo("mutex destroy error!");
     }
 #endif
@@ -510,10 +519,10 @@ usb_dev_cdc_send(class_handle_t handle, uint8_t ep, uint8_t *buf, uint32_t len)
 
     cdc = (usb_dev_cdc_t *)handle;
 
-    if (cdc->bulkIn.ep == ep) {
-        pipe = &cdc->bulkIn;
-    } else if (cdc->interruptIn.ep == ep) {
-        pipe = &cdc->interruptIn;
+    if (cdc->bulk_in.ep == ep) {
+        pipe = &cdc->bulk_in;
+    } else if (cdc->intr_in.ep == ep) {
+        pipe = &cdc->intr_in;
     }
 
     if (pipe) {
@@ -544,14 +553,14 @@ usb_dev_cdc_recv(class_handle_t handle, uint8_t ep, uint8_t *buf, uint32_t len)
     }
 
     cdc = (usb_dev_cdc_t *)handle;
-    if (cdc->bulkOut.is_busy) {
+    if (cdc->bulk_out.is_busy) {
         return USB_BUSY;
     }
 
     OS_ENTER_CRITICAL(sr);
     err = usb_device_recv_req(cdc->handle, ep, buf, len);
     if (!err) {
-        cdc->bulkOut.is_busy = true;
+        cdc->bulk_out.is_busy = true;
     }
     OS_EXIT_CRITICAL(sr);
 

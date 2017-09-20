@@ -73,28 +73,28 @@ typedef struct
 #define USB_IN                                                           1
 
 /* USB standard descriptor length */
-#define USB_DESCRIPTOR_LENGTH_DEVICE                                     0x12
-#define USB_DESCRIPTOR_LENGTH_CONFIGURE                                  0x09
-#define USB_DESCRIPTOR_LENGTH_INTERFACE                                  0x09
-#define USB_DESCRIPTOR_LENGTH_ENDPOINT                                   0x07
-#define USB_DESCRIPTOR_LENGTH_DEVICE_QUALITIER                           0x0A
-#define USB_DESCRIPTOR_LENGTH_OTG_DESCRIPTOR                             5
+#define DESC_LEN_DEVICE                                                  0x12
+#define DESC_LEN_CONFIGURE                                               0x09
+#define DESC_LEN_INTERFACE                                               0x09
+#define DESC_LEN_ENDPOINT                                                0x07
+#define DESC_LEN_DEVICE_QUALITIER                                        0x0A
+#define DESC_LEN_OTG_DESCRIPTOR                                          5
 
 /* USB standard descriptor type */
-#define USB_DESCRIPTOR_TYPE_DEVICE                                       0x01
-#define USB_DESCRIPTOR_TYPE_CONFIGURE                                    0x02
-#define USB_DESCRIPTOR_TYPE_STRING                                       0x03
-#define USB_DESCRIPTOR_TYPE_INTERFACE                                    0x04
-#define USB_DESCRIPTOR_TYPE_ENDPOINT                                     0x05
-#define USB_DESCRIPTOR_TYPE_DEVICE_QUALITIER                             0x06
-#define USB_DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION                    0x07
-#define USB_DESCRIPTOR_TYPE_INTERFAACE_POWER                             0x08
-#define USB_DESCRIPTOR_TYPE_OTG                                          0x09
-#define USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION                        0x0B
+#define DESC_TYPE_DEVICE                                                 0x01
+#define DESC_TYPE_CONFIGURE                                              0x02
+#define DESC_TYPE_STRING                                                 0x03
+#define DESC_TYPE_INTERFACE                                              0x04
+#define DESC_TYPE_ENDPOINT                                               0x05
+#define DESC_TYPE_DEVICE_QUALITIER                                       0x06
+#define DESC_TYPE_OTHER_SPEED_CONFIGURATION                              0x07
+#define DESC_TYPE_INTERFAACE_POWER                                       0x08
+#define DESC_TYPE_OTG                                                    0x09
+#define DESC_TYPE_INTERFACE_ASSOCIATION                                  0x0B
 
-#define USB_DESCRIPTOR_TYPE_HID                                          0x21
-#define USB_DESCRIPTOR_TYPE_HID_REPORT                                   0x22
-#define USB_DESCRIPTOR_TYPE_HID_PHYSICAL                                 0x23
+#define DESC_TYPE_HID                                                    0x21
+#define DESC_TYPE_HID_REPORT                                             0x22
+#define DESC_TYPE_HID_PHYSICAL                                           0x23
 
 /* USB standard request type */
 #define USB_REQ_TYPE_DIR_MASK                                            0x80
