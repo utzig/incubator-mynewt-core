@@ -257,7 +257,7 @@ _usb_device_set_clear_feature(usb_device_common_class_t *class,
 
 static int
 _usb_device_set_address(usb_device_common_class_t *classHandle,
-        usb_setup_t *setup, uint8_t * *buffer, uint32_t *length)
+        usb_setup_t *setup, uint8_t **buffer, uint32_t *length)
 {
     uint8_t state;
     int err = USB_INVALID_REQ;
@@ -276,11 +276,11 @@ _usb_device_set_address(usb_device_common_class_t *classHandle,
 
     if (state != kUSB_DeviceStateAddressing) {
         state = setup->wValue & 0xff;
-        err = usb_dev_set_status(classHandle->handle,
-                                 kUSB_DeviceStatusAddress, &state);
+        err = usb_dev_set_status(classHandle->handle, kUSB_DeviceStatusAddress,
+                &state);
     } else {
-        err = usb_dev_set_status(classHandle->handle,
-                                 kUSB_DeviceStatusAddress, NULL);
+        err = usb_dev_set_status(classHandle->handle, kUSB_DeviceStatusAddress,
+                NULL);
 
         if (!err) {
             state = kUSB_DeviceStateAddress;
@@ -304,7 +304,6 @@ _usb_device_get_descriptor(usb_device_common_class_t *classHandle,
 
     usb_dev_get_status(classHandle->handle, kUSB_DeviceStatusDeviceState, &state);
 
-    printf("state=%d\n", state);
     switch (state) {
     case kUSB_DeviceStateAddress:
     case kUSB_DeviceStateConfigured:
@@ -313,8 +312,6 @@ _usb_device_get_descriptor(usb_device_common_class_t *classHandle,
     default:
         return err;
     }
-
-    printf("type=%d, index=%d\n", type, index);
 
     desc.common_desc.len = setup->wLength;
     switch (type) {
@@ -518,17 +515,20 @@ _usb_device_control_cb_feedback(usb_device_handle handle, usb_setup_t *setup,
         }
         err = usb_dev_ep_stall(handle, USB_CONTROL_ENDPOINT | dir);
     } else {
-        printf("*len=%ld, setup->wLength=%d\n", *len, setup->wLength);
         if (*len > setup->wLength) {
             *len = setup->wLength;
         }
 
+        /* stage == kUSB_DeviceControlPipeSetupStage is setup (not in) */
+
         err = usb_device_send_req(handle, USB_CONTROL_ENDPOINT, *buf, *len);
-        printf("err=%d, bmRequestType=0x%02x\n", err, setup->bmRequestType);
+        //printf("err=%d, bmRequestType=0x%02x\n", err, setup->bmRequestType);
+#if 0 //FIXME: temporary test for stm32
         if (!err && is_req_type_in(setup->bmRequestType)) {
             err = usb_device_recv_req(handle, USB_CONTROL_ENDPOINT, NULL, 0);
-            printf("recv_req, err=%d\n", err);
+            //printf("recv_req, err=%d\n", err);
         }
+#endif
     }
     return err;
 }
@@ -549,8 +549,6 @@ _usb_device_control_cb(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void 
     usb_dev_ctrl_req_t req;
     int err = USB_INVALID_REQ;
 
-    //printf("_usb_device_control_cb\n");
-
     if (msg->len == USB_UNINITIALIZED_VAL_32 || !param) {
         return err;
     }
@@ -559,11 +557,7 @@ _usb_device_control_cb(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void 
     setup = (usb_setup_t *)&class->setupBuffer[0];
     usb_dev_get_status(handle, kUSB_DeviceStatusDeviceState, &state);
 
-    //printf("state=%d, len=%ld, wLength=%d, bmRequestType=0x%02x, setup=%d\n", state,
-    //        msg->len, setup->wLength, setup->bmRequestType, msg->setup);
-
     if (msg->setup) {
-        //printf("msg->len=%ld\n", msg->len);
         if (msg->len != USB_SETUP_PACKET_SIZE || !msg->buf) {
             /* If a invalid setup is received, the control pipes should be de-init and init again.
              * Due to the IP can not meet this require, it is revesed for feature.
@@ -576,12 +570,6 @@ _usb_device_control_cb(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void 
             return err;
         }
 
-#if 0
-        printf("<- ");
-        for (int i=0; i<8; i++) printf("[%02x]", msg->buf[i]);
-        printf(" \n");
-#endif
-
         /* Receive a setup request */
         usb_setup_t *st = (usb_setup_t *)msg->buf;
         setup->wValue = USB_U16_FROM_LE(st->wValue);
@@ -590,10 +578,10 @@ _usb_device_control_cb(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void 
         setup->bRequest = st->bRequest;
         setup->bmRequestType = st->bmRequestType;
 
-        printf("bRequest=%d, bmRequestType=0x%02x\n", setup->bRequest, setup->bmRequestType);
-
+        printf("bmRequestType=%02x, bRequest=%02x\n", setup->bmRequestType, setup->bRequest);
         if (is_req_type_std(setup->bmRequestType)) {
             if (_std_req_table[setup->bRequest]) {
+                printf("bRequest=%02x, wValue=%04x\n", setup->bRequest, setup->wValue);
                 err = _std_req_table[setup->bRequest](class, setup, &buf, &len);
             }
         } else {
@@ -648,13 +636,18 @@ _usb_device_control_cb(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void 
             }
         }
 
-        /* Send the reponse to the host. */
+        /* TODO: utzig - this is where setup stage is handled! */
+        /* Send the response to the host. */
         err = _usb_device_control_cb_feedback(handle, setup, err,
                 kUSB_DeviceControlPipeSetupStage, &buf, &len);
+    //} else if (msg->is_in) {
+        /* TODO: utzig - this is where stage in is handled! */
+    //    err = usb_device_recv_req(handle, USB_CONTROL_ENDPOINT, NULL, 0);
     } else if (state == kUSB_DeviceStateAddressing) {
         err = _std_req_table[setup->bRequest](class, setup, &buf, &len);
+    //} else if (is_req_type_in(setup->bmRequestType)) {
     } else if (msg->len && setup->wLength && is_req_type_out(setup->bmRequestType)) {
-        //printf("bmRequestType=0x%02x\n", setup->bmRequestType);
+        //printf("out: bmRequestType=0x%02x\n", setup->bmRequestType);
         if (is_req_type_class(setup->bmRequestType)) {
             req.buf = msg->buf;
             req.is_setup = 0;
@@ -678,29 +671,31 @@ _usb_device_control_cb(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void 
 int
 usb_device_control_pipe_init(usb_device_handle handle, void *param)
 {
-    usb_dev_ep_init_t epInitStruct;
+    usb_dev_ep_init_t ep_init;
     usb_dev_ep_cb_t ep_cb;
     int err;
 
     ep_cb.fn = _usb_device_control_cb;
     ep_cb.param = param;
 
-    epInitStruct.zlt = 1;
-    epInitStruct.transferType = USB_ENDPOINT_CONTROL;
-    epInitStruct.maxPacketSize = USB_CONTROL_MAX_PACKET_SIZE;
+    ep_init.zlt = 1;
+    ep_init.transferType = USB_ENDPOINT_CONTROL;
+    ep_init.maxPacketSize = USB_CONTROL_MAX_PACKET_SIZE;
+    ep_init.endpointAddress = 0x80;
 
-    epInitStruct.endpointAddress = USB_CONTROL_ENDPOINT | 0x80;
-
-    err = usb_dev_ep_init(handle, &epInitStruct, &ep_cb);
+    err = usb_dev_ep_init(handle, &ep_init, &ep_cb);
     if (err) {
         return err;
     }
 
-    epInitStruct.endpointAddress = USB_CONTROL_ENDPOINT;
+    ep_init.zlt = 1;
+    ep_init.transferType = USB_ENDPOINT_CONTROL;
+    ep_init.maxPacketSize = USB_CONTROL_MAX_PACKET_SIZE;
+    ep_init.endpointAddress = 0;
 
-    err = usb_dev_ep_init(handle, &epInitStruct, &ep_cb);
+    err = usb_dev_ep_init(handle, &ep_init, &ep_cb);
     if (err) {
-        usb_dev_ep_deinit(handle, USB_CONTROL_ENDPOINT | 0x80);
+        usb_dev_ep_deinit(handle, 0x80);
         return err;
     }
 

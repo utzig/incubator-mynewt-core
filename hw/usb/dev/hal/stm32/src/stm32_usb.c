@@ -32,36 +32,13 @@
 #include <stm32f7xx_hal_flash_ex.h>
 #include <cmsis_nvic.h>
 
+#include <hal/hal_gpio.h>
+#include <bsp/bsp.h>
+
 //FIXME:
 //
 static stm32_usb_dev_state_t g_stm32_usb_dev_state;
 static void *g_handle = NULL;
-
-static int g_counter = 1;
-static int g_write_tx = 0;
-static int g_send = 0;
-static int g_w_len = 0;
-static int g_w_buf[8] = { 0 };
-static int g_loops = 0;
-#if 0
-static int g_w_xfer_len = 0;
-static int g_w_xfer_count = 0;
-static int g_reset = 0;
-static int g_stage_in = 0;
-static int g_stage_out = 0;
-static int g_stage_setup = 0;
-static int g_suspend = 0;
-static int g_resume = 0;
-static int g_sof = 0;
-#endif
-
-//FIXME: this can be removed?
-typedef enum
-{
-    STATE_RESET   = 0x00,
-    STATE_READY   = 0x01,
-    STATE_BUSY    = 0x03,
-} StateTypeDef;
 
 static void
 _stm32_usb_dev_msp_init(void)
@@ -148,65 +125,25 @@ _init_cb_msg_with_code(usb_dev_cb_msg_t *msg, usb_device_notification_t code)
     msg->setup = 0;
 }
 
-#if 0
-static void
-_stm32_usb_dev_reset(stm32_usb_dev_state_t *state)
-{
-    usb_dev_cb_msg_t msg;
-
-    /* TODO: mcu specific reset */
-
-    _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyBusReset);
-    usb_dev_notify(state->dev, &msg);
-}
-
-#if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)
-static void
-_stm32_usb_dev_sleep(stm32_usb_dev_state_t *state)
-{
-    usb_dev_cb_msg_t msg;
-
-    /* TODO: mcu code */
-
-    _init_cb_msg_with_code(&msg, kUSB_DeviceNotifySuspend);
-    usb_dev_notify(state->dev, &msg);
-}
-
-static void
-_stm32_usb_dev_resume(stm32_usb_dev_state_t *state)
-{
-    usb_dev_cb_msg_t msg;
-
-    /* TODO: mcu code */
-
-    _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyResume);
-    usb_dev_notify(state->dev, &msg);
-}
-#endif
-#endif
-
-#if 0
-static void
-_stm32_usb_dev_sof(stm32_usb_dev_state_t *state)
-{
-    /* TODO: mcu code */
-}
-#endif
-
 static int
 _stm32_usb_dev_set_addr(stm32_usb_dev_state_t *state, uint8_t addr)
 {
     __HAL_LOCK(state);
+    if (addr == 0) {
+        hal_gpio_write(LED_BLINK_PIN, 1);
+    } else {
+        hal_gpio_write(LED_2, 1);
+    }
     USB_SetDevAddress(state->Instance, addr);
     __HAL_UNLOCK(state);
     return 0;
 }
 
 static int
-_stm32_usb_dev_ep_init(stm32_usb_dev_state_t *state, usb_dev_ep_init_t *epInit)
+_stm32_usb_dev_ep_init(stm32_usb_dev_state_t *state, usb_dev_ep_init_t *ep_init)
 {
     USB_OTG_EPTypeDef *ep;
-    uint8_t ep_addr = epInit->endpointAddress;
+    uint8_t ep_addr = ep_init->endpointAddress;
 
     if (ep_addr & 0x80) {
         ep = &state->IN_ep[ep_addr & 0x7f];
@@ -216,8 +153,8 @@ _stm32_usb_dev_ep_init(stm32_usb_dev_state_t *state, usb_dev_ep_init_t *epInit)
     ep->num = ep_addr & 0x7f;
 
     ep->is_in = (0x80 & ep_addr) != 0;
-    ep->maxpacket = epInit->maxPacketSize;
-    ep->type = epInit->transferType;
+    ep->maxpacket = ep_init->maxPacketSize;
+    ep->type = ep_init->transferType;
     if (ep->is_in) {
         ep->tx_fifo_num = ep->num;
     }
@@ -244,45 +181,35 @@ _stm32_usb_dev_ep_deinit(stm32_usb_dev_state_t *state,
         ep = &state->OUT_ep[ep_addr];
     }
 
-    //printf("_ep_deinit 0x%02x\n", ep_addr);
-
     __HAL_LOCK(state);
     USB_DeactivateEndpoint(state->Instance, ep);
     __HAL_UNLOCK(state);
     return 0;
 }
 
-
 static int
-_stm32_usb_dev_recv(usb_dev_ctrl_handle handle,
-                    uint8_t ep_addr, uint8_t *buf, uint32_t len)
+_stm32_usb_dev_xfer(usb_dev_ctrl_handle handle, uint8_t ep_addr,
+        uint8_t *buf, uint32_t len)
 {
     stm32_usb_dev_state_t *state = (stm32_usb_dev_state_t *)handle;
     USB_OTG_EPTypeDef *ep;
 
-    if (!handle) {
-        return USB_INVALID_HANDLE;
-    }
-
-    /* EP0 allows zero length packets for "priming" */
-    ep_addr &= 0x7f;
-    if (ep_addr && !buf) {
+    /* EP0 allows zero length packets */
+    if ((ep_addr & 0x7f) && !buf) {
         return USB_INVALID_PARAM;
     }
-    ep = &state->OUT_ep[ep_addr];
+
+    if (ep_addr & 0x80) {
+        ep = &state->IN_ep[ep_addr & 0x7f];
+    } else {
+        ep = &state->OUT_ep[ep_addr];
+    }
 
     ep->xfer_buff = buf;
     ep->xfer_len = len;
     ep->xfer_count = 0;
-    ep->is_in = 0;
-    ep->num = ep_addr;
-
-    //printf("_recv, ep=%d, len=%ld\n", ep->num, len);
-#if 0
-    printf("<= ");
-    for (int i=0;i<len;i++) printf("[%02x]", buf[i]);
-    printf(" \n");
-#endif
+    ep->is_in = ep_addr >> 7;
+    ep->num = ep_addr & 0x7f;
 
     if (state->Init.dma_enable) {
         ep->dma_addr = (uint32_t)buf;
@@ -298,44 +225,29 @@ _stm32_usb_dev_recv(usb_dev_ctrl_handle handle,
 }
 
 static int
-_stm32_usb_dev_send(usb_dev_ctrl_handle handle,
-                    uint8_t ep_addr,
-                    uint8_t *buf,
-                    uint32_t len)
+_stm32_usb_dev_recv(usb_dev_ctrl_handle handle, uint8_t ep_addr, uint8_t *buf,
+        uint32_t len)
 {
     stm32_usb_dev_state_t *state = (stm32_usb_dev_state_t *)handle;
-    USB_OTG_EPTypeDef *ep;
-
-    if (!handle) {
-        return USB_INVALID_HANDLE;
+    if ((ep_addr & ~0x80) == 0) {
+        state->ep0.state = EP0_DATA_OUT;
+        state->ep0.out[0].total_len = len;
+        state->ep0.out[0].rem_len = len;
     }
+    return _stm32_usb_dev_xfer(handle, ep_addr & 0x7f, buf, len);
+}
 
-    ep_addr &= 0x7f;
-    /* EP0 allows zero length packets for "priming" */
-    if (ep_addr && !buf) {
-        return USB_INVALID_PARAM;
+static int
+_stm32_usb_dev_send(usb_dev_ctrl_handle handle, uint8_t ep_addr, uint8_t *buf,
+        uint32_t len)
+{
+    stm32_usb_dev_state_t *state = (stm32_usb_dev_state_t *)handle;
+    if ((ep_addr & ~0x80) == 0) {
+        state->ep0.state = EP0_DATA_IN;
+        state->ep0.in[0].total_len = len;
+        state->ep0.in[0].rem_len = len;
     }
-    ep = &state->IN_ep[ep_addr];
-
-    ep->xfer_buff = buf;
-    ep->xfer_len = len;
-    ep->xfer_count = 0;
-    ep->is_in = 1;
-    ep->num = ep_addr;
-
-    g_send = g_counter++;
-
-    if (state->Init.dma_enable) {
-        ep->dma_addr = (uint32_t)buf;
-    }
-
-    if (ep->num == 0) {
-        USB_EP0StartXfer(state->Instance, ep, state->Init.dma_enable);
-    } else {
-        USB_EPStartXfer(state->Instance, ep, state->Init.dma_enable);
-    }
-
-    return 0;
+    return _stm32_usb_dev_xfer(handle, ep_addr | 0x80, buf, len);
 }
 
 static int
@@ -344,9 +256,7 @@ _stm32_usb_dev_ep_stall(stm32_usb_dev_state_t *state, uint8_t ep_addr)
     USB_OTG_EPTypeDef *ep;
 
     /*
-     * FIXME: need to cancel first?
-     *
-     * usb_stm32_cancel(state, ep);
+     * FIXME: need to cancel any xfer first?
      */
 
     if (0x80 & ep_addr) {
@@ -359,11 +269,9 @@ _stm32_usb_dev_ep_stall(stm32_usb_dev_state_t *state, uint8_t ep_addr)
     ep->num = ep_addr & 0x7F;
     ep->is_in = (ep_addr & 0x80) == 0x80;
 
-    //printf("_stall, ep=%d\n", ep->num);
-
     __HAL_LOCK(state);
     USB_EPSetStall(state->Instance, ep);
-    if (!(ep_addr & 0x7F)) {
+    if (ep->num == 0) {
         USB_EP0_OutStart(state->Instance, state->Init.dma_enable, (uint8_t *)state->Setup);
     }
     __HAL_UNLOCK(state);
@@ -386,8 +294,6 @@ _stm32_usb_dev_ep_unstall(stm32_usb_dev_state_t *state, uint8_t ep_addr)
     ep->num = ep_addr & 0x7F;
     ep->is_in = (ep_addr & 0x80) == 0x80;
 
-    //printf("_unstall, ep=%d\n", ep->num);
-
     __HAL_LOCK(state);
     USB_EPClearStall(state->Instance, ep);
     __HAL_UNLOCK(state);
@@ -401,8 +307,6 @@ _stm32_usb_dev_deinit(usb_dev_ctrl_handle handle)
     if (!handle) {
         return USB_INVALID_HANDLE;
     }
-
-    //printf("usb dev deinit\n");
 
    //FIXME: state->State = STATE_BUSY;
 
@@ -426,8 +330,6 @@ _stm32_usb_dev_cancel(usb_dev_ctrl_handle handle, uint8_t ep)
     if (!handle) {
         return USB_INVALID_HANDLE;
     }
-
-    //printf("usb dev cancel\n");
 
     state = (stm32_usb_dev_state_t *)handle;
 
@@ -468,18 +370,6 @@ _stm32_usb_dev_control(usb_dev_ctrl_handle handle,
     }
 
     state = (stm32_usb_dev_state_t *)handle;
-
-    //printf("_stm32_usb_dev_control %d\n", (uint8_t) type);
-    //printf("w_len=%d\n", g_w_len);
-#if 0
-    if (g_w_buf[0] != 0) {
-        printf("-> ");
-        for (int i = 0; i < 8; i++) printf("[%02x]", g_w_buf[i]);
-        printf(" \n");
-        for (int i = 0; i < 8; i++) g_w_buf[i] = 0;
-    }
-#endif
-    g_w_len = 0;
 
     switch (type) {
     case USB_DEV_CTRL_RUN:
@@ -540,7 +430,7 @@ _stm32_usb_dev_control(usb_dev_ctrl_handle handle,
         }
         break;
     case USB_DEV_CTRL_SET_ADDR:
-        //printf("set addr\n");
+        hal_gpio_write(LED_2, 1);
         if (param) {
             err = _stm32_usb_dev_set_addr(state, *((uint8_t *)param));
         }
@@ -692,7 +582,7 @@ _stm32_usb_dev_init(uint8_t controllerId,
     state->Init.phy_itface = USB_OTG_EMBEDDED_PHY;
     state->Init.Sof_enable = 0;
     state->Init.speed = USB_OTG_SPEED_FULL;
-    state->Init.vbus_sensing_enable = 1; //FIXME: 1;
+    state->Init.vbus_sensing_enable = 0; //FIXME: 1;
     state->Init.lpm_enable = 0;
 
     instance = state->Instance = USB_OTG_FS;
@@ -732,7 +622,7 @@ _stm32_usb_dev_init(uint8_t controllerId,
         state->OUT_ep[i].is_in = 0;
         state->OUT_ep[i].num = i;
         //FIXME: this was IN_ep !!!
-        state->IN_ep[i].tx_fifo_num = i;
+        state->OUT_ep[i].tx_fifo_num = i;
 
         state->OUT_ep[i].type = EP_TYPE_CTRL;
         state->OUT_ep[i].maxpacket = USB_OTG_FS_MAX_PACKET_SIZE;
@@ -788,10 +678,8 @@ _write_empty_tx_fifo(stm32_usb_dev_state_t *state, uint8_t epnum)
     int32_t len = 0;
     uint32_t len32b;
     uint32_t fifoemptymsk = 0;
-    int i;
 
     ep = &state->IN_ep[epnum];
-    if (++g_loops == 1) { ep->xfer_len = 8; }
     len = ep->xfer_len - ep->xfer_count;
 
     if (len > ep->maxpacket) {
@@ -811,8 +699,6 @@ _write_empty_tx_fifo(stm32_usb_dev_state_t *state, uint8_t epnum)
         }
         len32b = (len + 3) / 4;
 
-        g_w_len = len;
-        for (i = 0; i < 8; i++) { g_w_buf[i] = ep->xfer_buff[i]; }
         USB_WritePacket(USBx, ep->xfer_buff, epnum, len, state->Init.dma_enable);
 
         ep->xfer_buff += len;
@@ -831,18 +717,12 @@ stm32_usb_dev_isr(void)
     uint32_t i = 0, ep_intr = 0, epint = 0, epnum = 0;
     uint32_t fifoemptymsk = 0, temp = 0;
     USB_OTG_EPTypeDef *ep = NULL;
-    uint32_t hclk = 200000000;
+    uint32_t hclk;
     stm32_usb_dev_state_t *usb = NULL;
     USB_OTG_GlobalTypeDef *USBx = NULL;
     usb_dev_cb_msg_t msg;
 
     usb = &g_stm32_usb_dev_state;
-
-#if 0
-    if (usb->state != USB_STATE_READY) {
-        return;
-    }
-#endif
 
     /* Required for _ll_usb */
     USBx = usb->Instance;
@@ -875,14 +755,24 @@ stm32_usb_dev_isr(void)
                             usb->OUT_ep[epnum].xfer_buff += usb->OUT_ep[epnum].maxpacket;
                         }
 
-                        /* TODO: data out stage callback */
-                        msg.len = usb->OUT_ep[epnum].xfer_len;
-                        msg.buf = usb->OUT_ep[epnum].xfer_buff;
-                        msg.setup = 0;
-                        msg.code = epnum;
-                        usb_dev_notify(usb->dev, &msg);
-
-                        //g_stage_out = g_counter++;
+                        if ((epnum & ~0x80) == 0 && usb->ep0.state == EP0_DATA_OUT) {
+                            usb->ep0.out[0].rem_len -= usb->OUT_ep[0].maxpacket;
+                            if (usb->ep0.out[0].rem_len > 0) {
+                                _stm32_usb_dev_recv(usb->dev->ctrl_handle, 0,
+                                        usb->OUT_ep[0].xfer_buff,
+                                        usb->ep0.out[0].rem_len);
+                            } else {
+                                usb->ep0.state = EP0_STATUS_IN;
+                                /* FIXME: needs this? */
+                                //_stm32_usb_dev_send(usb->dev->ctrl_handle, 0, NULL, 0);
+                            }
+                        } else {
+                            msg.len = usb->OUT_ep[epnum].xfer_len;
+                            msg.buf = usb->OUT_ep[epnum].xfer_buff;
+                            msg.setup = 0;
+                            msg.code = epnum;
+                            usb_dev_notify(usb->dev, &msg);
+                        }
 
                         if (usb->Init.dma_enable) {
                             if (!epnum && !usb->OUT_ep[epnum].xfer_len) {
@@ -895,15 +785,14 @@ stm32_usb_dev_isr(void)
                     if (epint & USB_OTG_DOEPINT_STUP) {
                         /* Inform the upper layer that a setup packet is available */
 
-                        /* TODO: setup stage callback */
+                        usb->ep0.state = EP0_SETUP;
+
                         msg.len = 8;
                         msg.buf = (uint8_t *)usb->Setup;
                         msg.setup = 1;
                         msg.code = epnum;
-                        //TODO: point buf to Setup ?
                         usb_dev_notify(usb->dev, &msg);
 
-                        //g_stage_setup = g_counter++;
                         CLEAR_OUT_EP_INTR(epnum, USB_OTG_DOEPINT_STUP);
                     }
 
@@ -942,14 +831,24 @@ stm32_usb_dev_isr(void)
                             usb->IN_ep[epnum].xfer_buff += usb->IN_ep[epnum].maxpacket;
                         }
 
-                        /* TODO: data in stage callback */
-                        msg.len = usb->IN_ep[epnum].xfer_len;
-                        msg.buf = usb->IN_ep[epnum].xfer_buff;
-                        msg.setup = 0;
-                        msg.code = 0x80 | epnum;
-                        usb_dev_notify(usb->dev, &msg);
-
-                        //g_stage_in = g_counter++;
+                        if ((epnum & ~0x80) == 0 && usb->ep0.state == EP0_DATA_IN) {
+                            usb->ep0.in[0].rem_len -= usb->IN_ep[0].maxpacket;
+                            if (usb->ep0.in[0].rem_len >= 0) {
+                                /* FIXME: need to save buf? index on rem_len? */
+                                _stm32_usb_dev_send(usb->dev->ctrl_handle, 0,
+                                        usb->IN_ep[0].xfer_buff,
+                                        usb->ep0.in[0].rem_len);
+                            } else {
+                                usb->ep0.state = EP0_STATUS_OUT;
+                            }
+                            _stm32_usb_dev_recv(usb->dev->ctrl_handle, 0, NULL, 0);
+                        } else {
+                            msg.len = usb->IN_ep[epnum].xfer_len;
+                            msg.buf = usb->IN_ep[epnum].xfer_buff;
+                            msg.setup = 0;
+                            msg.code = 0x80 | epnum;
+                            usb_dev_notify(usb->dev, &msg);
+                        }
 
                         if (usb->Init.dma_enable) {
                             /* this is ZLP, so prepare EP0 for next setup */
@@ -973,7 +872,6 @@ stm32_usb_dev_isr(void)
                         CLEAR_IN_EP_INTR(epnum, USB_OTG_DIEPINT_EPDISD);
                     }
                     if (epint & USB_OTG_DIEPINT_TXFE) {
-                        g_write_tx = g_counter++;
                         _write_empty_tx_fifo(usb , epnum);
                     }
                 }
@@ -995,7 +893,6 @@ stm32_usb_dev_isr(void)
             } else {
                 _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyResume);
                 usb_dev_notify(usb->dev, &msg);
-                //g_resume = g_counter++;
             }
 #endif
             usb->Instance->GINTSTS = USB_OTG_GINTSTS_WKUINT;
@@ -1007,7 +904,6 @@ stm32_usb_dev_isr(void)
 #if MYNEWT_VAL(USB_DEV_LOW_POWER_MODE)
                 _init_cb_msg_with_code(&msg, kUSB_DeviceNotifySuspend);
                 usb_dev_notify(usb->dev, &msg);
-                //g_suspend = g_counter++;
 #endif
             }
             usb->Instance->GINTSTS = USB_OTG_GINTSTS_USBSUSP;
@@ -1105,7 +1001,6 @@ stm32_usb_dev_isr(void)
 
             _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyBusReset);
             usb_dev_notify(usb->dev, &msg);
-            //g_reset = g_counter++;
 
             usb->Instance->GINTSTS = USB_OTG_GINTSTS_ENUMDNE;
         }
@@ -1132,7 +1027,6 @@ stm32_usb_dev_isr(void)
         /* Handle SOF Interrupt */
         if (USB_ReadInterrupts(usb->Instance) & USB_OTG_GINTSTS_SOF) {
             /* TODO: trigger SOF callback */
-            //g_sof++;
             usb->Instance->GINTSTS = USB_OTG_GINTSTS_SOF;
         }
 
@@ -1150,8 +1044,11 @@ stm32_usb_dev_isr(void)
 
         /* Handle Connection event Interrupt */
         if (USB_ReadInterrupts(usb->Instance) & USB_OTG_GINTSTS_SRQINT) {
+#if MYNEWT_VAL(USB_DEVICE_CONFIG_DETACH_ENABLE)
             _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyAttach);
             usb_dev_notify(usb->dev, &msg);
+#endif
+
             usb->Instance->GINTSTS = USB_OTG_GINTSTS_SRQINT;
         }
 
@@ -1160,8 +1057,10 @@ stm32_usb_dev_isr(void)
             temp = usb->Instance->GOTGINT;
 
             if (temp & USB_OTG_GOTGINT_SEDET) {
+#if MYNEWT_VAL(USB_DEVICE_CONFIG_DETACH_ENABLE)
                 _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyDetach);
                 usb_dev_notify(usb->dev, &msg);
+#endif
             }
             usb->Instance->GOTGINT |= temp;
         }
@@ -1249,5 +1148,5 @@ usb_hal_disable_irq(void)
 void
 usb_hal_clear_memory(void)
 {
-    /* Not needed for kinetis */
+    /* FIXME: needed? */
 }

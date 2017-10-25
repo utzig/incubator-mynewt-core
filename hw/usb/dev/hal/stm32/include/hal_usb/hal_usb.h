@@ -36,18 +36,34 @@ typedef enum
     LPM_L1 = 0x01, /* LPM L1 sleep */
 } PCD_LPM_StateTypeDef;
 
+#if 0
 enum {
     USB_STATE_OFF = 0,
     USB_STATE_RESET = 1,
     USB_STATE_READY = 2,
 };
+#endif
+
+enum
+{
+    EP0_SETUP,
+    EP0_DATA_IN,
+    EP0_DATA_OUT,
+    EP0_STATUS_IN,
+    EP0_STATUS_OUT,
+};
+
+struct ep_xfer
+{
+    int16_t total_len;
+    int16_t rem_len;
+};
 
 typedef struct
 {
-    uint8_t  *xfer_buf;
-    uint32_t xfer_len;
-    uint32_t xfer_done;
-    /* TODO: mcu specific ep state */
+    uint8_t        state;
+    struct ep_xfer in[0];
+    struct ep_xfer out[0];
 } stm32_usb_dev_ep_state_t;
 
 typedef struct
@@ -62,7 +78,6 @@ typedef struct
     USB_OTG_EPTypeDef        IN_ep[16];    /*!< IN endpoint parameters             */
     USB_OTG_EPTypeDef        OUT_ep[16];   /*!< OUT endpoint parameters            */
     HAL_LockTypeDef          Lock;         /*!< PCD peripheral status              */
-    //__IO PCD_StateTypeDef    State;        /*!< PCD communication state            */
     uint32_t                 Setup[12];    /*!< Setup packet buffer                */
     PCD_LPM_StateTypeDef     LPM_State;    /*!< LPM State                          */
     uint32_t                 BESL;
@@ -73,11 +88,10 @@ typedef struct
                                           This parameter can be set to ENABLE or DISABLE */
     void                     *pData;       /*!< Pointer to upper stack Handler */
 
+    stm32_usb_dev_ep_state_t ep0; //FIXME
+
     /* TODO: do we need this? */
 #if 0
-    uint8_t                  setupPacketBuffer[USB_SETUP_PACKET_SIZE * 2];
-    stm32_usb_dev_ep_state_t ep_state[MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) * 2];
-    uint8_t                  setupBufferIndex;
     uint8_t                  otgStatus;
 #endif
 } stm32_usb_dev_state_t;

@@ -51,18 +51,89 @@
 #include <dev/ch9.h>
 
 #include <hal_usb/hal_usb.h>
+#include <assert.h>
 
 #include <os/os.h>
 
 static usb_dev_t s_UsbDevice[MYNEWT_VAL(USB_DEVICE_CONFIG_NUM)];
-static struct os_eventq notification_queue;
-static struct os_event ev;
-static usb_dev_cb_msg_t message;
 
-//FIXME
-//static int mhead = 0;
-//static int mtail = 0;
-//static usb_dev_cb_msg_t messages[16];
+#define CB_SZ 4
+typedef struct
+{
+    usb_dev_cb_msg_t   buf[CB_SZ];
+    size_t             sz;
+    int                headidx;
+    int                tailidx;
+    struct os_mutex    mtx;
+    struct os_eventq   evtq;
+    struct os_event    evs[CB_SZ];
+} usb_msg_cb_t;
+
+static usb_msg_cb_t g_usb_msg;
+
+static void
+usb_msg_init(void)
+{
+    usb_msg_cb_t *p = &g_usb_msg;
+    os_mutex_init(&p->mtx);
+    os_eventq_init(&p->evtq);
+    p->sz = 0;
+    p->headidx = 0;
+    p->tailidx = 0;
+}
+
+static void
+usb_msg_deinit(void)
+{
+    usb_msg_cb_t *p = &g_usb_msg;
+    p->sz = 0;
+    p->headidx = 0;
+    p->tailidx = 0;
+}
+
+static int
+usb_msg_put(usb_dev_cb_msg_t *msg)
+{
+    usb_msg_cb_t *p = &g_usb_msg;
+    int evidx = -1;
+
+    os_mutex_pend(&p->mtx, (uint32_t)-1);
+    if (p->sz == CB_SZ) {
+        goto out;
+    }
+    memcpy(&p->buf[p->headidx], msg, sizeof(usb_dev_cb_msg_t));
+    evidx = p->headidx;
+    p->headidx = (p->headidx + 1) % CB_SZ;
+    p->sz++;
+
+out:
+    os_mutex_release(&p->mtx);
+
+    //FIXME: I'm doing this to wake the waiting thread, there must be a
+    //simpler way to do this!!!
+    os_eventq_put(&p->evtq, &p->evs[evidx]);
+
+    return 0;
+}
+
+static usb_dev_cb_msg_t *
+usb_msg_get(void)
+{
+    usb_msg_cb_t *p = &g_usb_msg;
+    usb_dev_cb_msg_t *msg = NULL;
+
+    os_mutex_pend(&p->mtx, (uint32_t)-1);
+    if (p->sz == 0) {
+        goto out;
+    }
+    msg = &p->buf[p->tailidx];
+    p->tailidx = (p->tailidx + 1) % CB_SZ;
+    p->sz--;
+
+out:
+    os_mutex_release(&p->mtx);
+    return msg;
+}
 
 /*!
  * This function allocates a device handle.
@@ -126,7 +197,7 @@ _usb_device_get_controller_interface(uint8_t controllerId, const usb_dev_ctrl_it
 
 static int
 _usb_device_transfer(usb_device_handle handle, uint8_t ep_addr, uint8_t *buf,
-                     uint32_t len)
+        uint32_t len)
 {
     usb_dev_t *dev = (usb_dev_t *)handle;
     uint8_t ep = USB_EP_NUMBER(ep_addr);
@@ -153,7 +224,6 @@ _usb_device_transfer(usb_device_handle handle, uint8_t ep_addr, uint8_t *buf,
             USB_CacheFlushLines((void *)buf, len);
         }
 #endif
-        printf("send, len=%lu\n", len);
         err = dev->ctrl_itf->send(dev->ctrl_handle, ep_addr, buf, len);
     } else {
 #if defined(USB_DEVICE_CONFIG_BUFFER_PROPERTY_CACHEABLE)
@@ -161,7 +231,6 @@ _usb_device_transfer(usb_device_handle handle, uint8_t ep_addr, uint8_t *buf,
             USB_CacheInvalidateLines((void *)buf, len);
         }
 #endif
-        printf("recv, len=%lu\n", len);
         err = dev->ctrl_itf->recv(dev->ctrl_handle, ep_addr, buf, len);
     }
     return err;
@@ -279,11 +348,13 @@ _usb_device_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 
     default:
         if (ep < MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS)) {
+            printf("ep=%d, dir=%d\n", ep, dir);
             epcb = &dev->epcbs[(ep << 1) | dir];
             if (epcb->fn) {
                 cb_msg.buf = msg->buf;
                 cb_msg.len = msg->len;
                 cb_msg.setup = msg->setup;
+                cb_msg.is_in = dir;
                 if (msg->setup) {
                     dev->epcbs[0].busy = 0;
                     dev->epcbs[1].busy = 0;
@@ -302,12 +373,9 @@ _usb_device_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 }
 
 int
-usb_dev_notify(void *handle, void *msg)
+usb_dev_notify(void *handle, usb_dev_cb_msg_t *msg)
 {
     usb_dev_t *dev = (usb_dev_t *) handle;
-    //usb_dev_cb_msg_t *message = (usb_dev_cb_msg_t *)msg;
-
-    memcpy(&message, (usb_dev_cb_msg_t *) msg, sizeof message);
 
     if (!msg || !handle) {
         return USB_INVALID_HANDLE;
@@ -318,14 +386,18 @@ usb_dev_notify(void *handle, void *msg)
     }
 
     if (dev->isResetting) {
-        if (USB_EP_NUMBER(message.code) && !(message.code & 0x70)) {
-            return _usb_device_notification(dev, &message);
+        //assert(0);
+        if (USB_EP_NUMBER(msg->code) && !(msg->code & 0x70)) {
+            /*
+             * FIXME: this is not re-entrant... if a second interrupt happens
+             * while the first one is being processed, both will be writing to
+             * the same var.
+             */
+            return _usb_device_notification(dev, msg);
         }
     }
 
-    //FIXME: are events copied???
-    ev.ev_arg = &message;
-    os_eventq_put(dev->notificationQueue, &ev);
+    usb_msg_put(msg);
 
     return 0;
 }
@@ -369,8 +441,7 @@ usb_dev_init(uint8_t controllerId, usb_device_callback_t devcb,
         return USB_INV_CTRL_ITF;
     }
 
-    os_eventq_init(&notification_queue);
-    dev->notificationQueue = &notification_queue;
+    usb_msg_init();
 
     err = dev->ctrl_itf->init(controllerId, dev, &dev->ctrl_handle);
     if (err) {
@@ -410,9 +481,7 @@ usb_device_deinit(usb_device_handle handle)
         dev->ctrl_itf = NULL;
     }
 
-    if (dev->notificationQueue) {
-        dev->notificationQueue = NULL;
-    }
+    usb_msg_deinit();
 
     _usb_device_free_handle(dev);
     return 0;
@@ -451,8 +520,8 @@ usb_dev_ep_init(usb_device_handle handle, usb_dev_ep_init_t *ep_init,
                 usb_dev_ep_cb_t *ep_cb)
 {
     usb_dev_t *dev = (usb_dev_t *)handle;
-    uint8_t endpoint;
-    uint8_t direction;
+    uint8_t ep;
+    uint8_t dir;
     uint8_t epidx;
 
     if (!dev) {
@@ -463,14 +532,14 @@ usb_dev_ep_init(usb_device_handle handle, usb_dev_ep_init_t *ep_init,
         return USB_INVALID_PARAM;
     }
 
-    endpoint = USB_EP_NUMBER(ep_init->endpointAddress);
-    direction = USB_EP_DIR(ep_init->endpointAddress);
+    ep = USB_EP_NUMBER(ep_init->endpointAddress);
+    dir = USB_EP_DIR(ep_init->endpointAddress);
 
-    if (endpoint >= MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS)) {
+    if (ep >= MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS)) {
         return USB_INVALID_PARAM;
     }
 
-    epidx = (uint8_t)((uint32_t)endpoint << 1) | direction;
+    epidx = (uint8_t)((uint32_t)ep << 1) | dir;
     dev->epcbs[epidx].fn = ep_cb->fn;
     dev->epcbs[epidx].param = ep_cb->param;
     dev->epcbs[epidx].busy = 0;
@@ -575,49 +644,58 @@ usb_dev_set_status(usb_device_handle handle, usb_device_status_t type, void *par
     switch (type) {
 //FIXME
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_EHCI) && MYNEWT_VAL(USB_DEVICE_CONFIG_EHCI_TEST_MODE)
-        case kUSB_DeviceStatusTestMode:
-            err = _usb_device_control(handle, USB_DEV_CTRL_SET_TEST_MODE, param);
-            break;
+    case kUSB_DeviceStatusTestMode:
+        err = _usb_device_control(handle, USB_DEV_CTRL_SET_TEST_MODE, param);
+        break;
 #endif
-        case kUSB_DeviceStatusOtg:
-            err = _usb_device_control(handle, USB_DEV_CTRL_SET_OTG_STATUS, param);
-            break;
-        case kUSB_DeviceStatusDeviceState:
+    case kUSB_DeviceStatusOtg:
+        err = _usb_device_control(handle, USB_DEV_CTRL_SET_OTG_STATUS, param);
+        break;
+    case kUSB_DeviceStatusDeviceState:
+        if (param) {
+            ((usb_dev_t *)handle)->state = *(uint8_t *)param;
+            err = 0;
+        }
+        break;
+    case kUSB_DeviceStatusAddress:
+#if 0
+        if (((usb_dev_t *)handle)->state != kUSB_DeviceStateAddressing) {
             if (param) {
-                ((usb_dev_t *)handle)->state = *(uint8_t *)param;
+                ((usb_dev_t *)handle)->deviceAddress = *(uint8_t *)param;
+                ((usb_dev_t *)handle)->state = kUSB_DeviceStateAddressing;
                 err = 0;
             }
-            break;
-        case kUSB_DeviceStatusAddress:
-            if (((usb_dev_t *)handle)->state != kUSB_DeviceStateAddressing) {
-                if (param) {
-                    ((usb_dev_t *)handle)->deviceAddress = *(uint8_t *)param;
-                    ((usb_dev_t *)handle)->state = kUSB_DeviceStateAddressing;
-                    //printf("set addr %d\n", ((usb_dev_t *)handle)->deviceAddress);
-                    err = 0;
-                }
-            } else {
+        } else {
+            err = _usb_device_control(handle, USB_DEV_CTRL_SET_ADDR,
+                                        &((usb_dev_t *)handle)->deviceAddress);
+        }
+#endif /* FIXME: the commented block above works on kinetis, below stm32 test */
+        if (param) {
+                ((usb_dev_t *)handle)->deviceAddress = *(uint8_t *)param;
+                ((usb_dev_t *)handle)->state = kUSB_DeviceStateAddressing;
                 err = _usb_device_control(handle, USB_DEV_CTRL_SET_ADDR,
-                                            &((usb_dev_t *)handle)->deviceAddress);
-                //printf("set addr %d\n", error);
-            }
-            break;
-        case kUSB_DeviceStatusBusResume:
-            err = _usb_device_control(handle, USB_DEV_CTRL_RESUME, param);
-            break;
+                                          &((usb_dev_t *)handle)->deviceAddress);
+                if (!err) {
+                    ((usb_dev_t *)handle)->state = kUSB_DeviceStateAddress;
+                }
+        }
+        break;
+    case kUSB_DeviceStatusBusResume:
+        err = _usb_device_control(handle, USB_DEV_CTRL_RESUME, param);
+        break;
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)
-        case kUSB_DeviceStatusRemoteWakeup:
-            if (param) {
-                ((usb_dev_t *)handle)->remotewakeup = *(uint8_t *)param;
-                err = 0;
-            }
-            break;
+    case kUSB_DeviceStatusRemoteWakeup:
+        if (param) {
+            ((usb_dev_t *)handle)->remotewakeup = *(uint8_t *)param;
+            err = 0;
+        }
+        break;
 #endif
-        case kUSB_DeviceStatusBusSuspend:
-            err = _usb_device_control(handle, USB_DEV_CTRL_SUSPEND, param);
-            break;
-        default:
-            break;
+    case kUSB_DeviceStatusBusSuspend:
+        err = _usb_device_control(handle, USB_DEV_CTRL_SUSPEND, param);
+        break;
+    default:
+        break;
     }
 
     return err;
@@ -627,17 +705,28 @@ usb_dev_set_status(usb_device_handle handle, usb_device_status_t type, void *par
  * This function is used to handle controller message.
  * This function should not be called in application directly.
  */
-void
+bool
 usb_device_task_fn(void *deviceHandle)
 {
     usb_dev_t *dev = (usb_dev_t *) deviceHandle;
-    struct os_event *ev;
+    usb_dev_cb_msg_t *msg;
+    bool handled = false;
+    //struct os_event *evt;
 
     if (dev) {
-        ev = os_eventq_get(dev->notificationQueue);
-        printf("new event=%d\n", ((usb_dev_cb_msg_t *)ev->ev_arg)->code);
-        _usb_device_notification(dev, ev->ev_arg);
+        (void)os_eventq_get(&g_usb_msg.evtq);
+        msg = usb_msg_get();
+#if 0
+        printf("evt=%p, msg=%p\n", evt, msg);
+        if (msg) printf("msg->code=%02x\n", msg->code);
+#endif
+        if (msg) {
+            _usb_device_notification(dev, msg);
+            handled = true;
+        }
     }
+
+    return handled;
 }
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)

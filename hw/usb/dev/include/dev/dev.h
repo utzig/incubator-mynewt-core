@@ -50,6 +50,7 @@
 #define DEV_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <usb/usb.h>
 
 typedef enum _usb_device_status
@@ -122,6 +123,7 @@ typedef struct
     uint8_t  *buf;                                /*!< Transferred buffer */
     uint32_t len;                                 /*!< Transferred data length */
     uint8_t  setup;                               /*!< Is in a setup phase */
+    uint8_t  is_in;
 } usb_dev_ep_cb_msg_t;
 
 /*
@@ -240,7 +242,7 @@ typedef struct
     usb_dev_ctrl_handle                            ctrl_handle;
     const usb_dev_ctrl_itf_t                       *ctrl_itf;
     uint8_t                                        controllerId;
-    struct os_eventq                               *notificationQueue;
+    //struct os_eventq                               *notificationQueue;
     usb_device_callback_t                          devcb;
     usb_dev_ep_cb_t                                epcbs[MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS) << 1];
     uint8_t                                        deviceAddress;
@@ -318,13 +320,13 @@ int usb_dev_get_status(usb_device_handle handle, usb_device_status_t type,
 int usb_dev_set_status(usb_device_handle handle, usb_device_status_t type,
         void *param);
 
-int usb_dev_notify(void *handle, void *msg);
+int usb_dev_notify(void *handle, usb_dev_cb_msg_t *msg);
 
 /*
  * The function is used to handle the controller message.
  * This function should not be called in the application directly.
  */
-void usb_device_task_fn(void *deviceHandle);
+bool usb_device_task_fn(void *deviceHandle);
 
 void usb_device_get_version(uint32_t *version);
 

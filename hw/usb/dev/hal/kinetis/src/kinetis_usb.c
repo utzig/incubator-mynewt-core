@@ -528,7 +528,7 @@ _kinetis_usb_dev_sleep(kinetis_usb_dev_state_t *state)
     regs->ISTAT = USBx_ISTAT_RESUME;
 
     _init_cb_msg_with_code(&msg, kUSB_DeviceNotifySuspend);
-    usb_dev_notify(state->deviceHandle, &msg);
+    usb_dev_notify(state->dev, &msg);
 }
 
 static void
@@ -546,7 +546,7 @@ _kinetis_usb_dev_resume(kinetis_usb_dev_state_t *state)
     regs->ISTAT = USBx_ISTAT_SLEEP;
 
     _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyResume);
-    usb_dev_notify(state->deviceHandle, &msg);
+    usb_dev_notify(state->dev, &msg);
 }
 #endif /* USB_KINETIS_LOW_POWER_MODE */
 
@@ -562,7 +562,7 @@ _kinetis_usb_dev_vbus_rising(kinetis_usb_dev_state_t *state)
     regs->MISCCTRL |= USB_MISCCTRL_VREDG_EN_MASK;
 
     _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyAttach);
-    usb_dev_notify(state->deviceHandle, &msg);
+    usb_dev_notify(state->dev, &msg);
 }
 
 static void
@@ -574,7 +574,7 @@ _kinetis_usb_dev_vbus_falling(kinetis_usb_dev_state_t *state)
     state->registers->MISCCTRL |= USB_MISCCTRL_VFEDG_EN_MASK;
 
     _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyDetach);
-    usb_dev_notify(state->deviceHandle, &msg);
+    usb_dev_notify(state->dev, &msg);
 }
 #endif /* USB_DEVICE_CONFIG_DETACH_ENABLE || FSL_FEATURE_USB_KHCI_VBUS_DETECT_ENABLED */
 
@@ -610,7 +610,7 @@ _kinetis_usb_dev_error(kinetis_usb_dev_state_t *state)
     state->registers->ISTAT = USBx_ISTAT_ERROR;
 
     _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyError);
-    usb_dev_notify(state->deviceHandle, &msg);
+    usb_dev_notify(state->dev, &msg);
 }
 #endif
 
