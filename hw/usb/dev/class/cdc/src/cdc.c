@@ -56,6 +56,7 @@
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_CDC_ACM)
 #include <cdc/cdc.h>
 
+#include <hal/hal_gpio.h>
 #include <hal_usb/hal_usb.h>
 
 //FIXME: make dynamic
@@ -190,6 +191,8 @@ usb_dev_cdc_endpoints_init(usb_dev_cdc_t *cdc)
     usb_dev_itf_t *interface = NULL;
     int i, j;
     uint8_t dir;
+    usb_dev_ep_init_t ep_init;
+    usb_dev_ep_cb_t ep_cb;
     int err = USB_ERR;
 
     if (!cdc) {
@@ -219,23 +222,21 @@ usb_dev_cdc_endpoints_init(usb_dev_cdc_t *cdc)
     }
     cdc->comm_itf = interface;
     for (i = 0; i < interface->eps.count; i++) {
-        usb_dev_ep_init_t epInitStruct;
-        usb_dev_ep_cb_t ep_cb;
-        epInitStruct.zlt = 0;
-        epInitStruct.endpointAddress = interface->eps.ep[i].ep_addr;
-        epInitStruct.maxPacketSize = interface->eps.ep[i].maxPacketSize;
-        epInitStruct.transferType = interface->eps.ep[i].transferType;
+        ep_init.zlt = 0;
+        ep_init.endpointAddress = interface->eps.ep[i].ep_addr;
+        ep_init.maxPacketSize = interface->eps.ep[i].maxPacketSize;
+        ep_init.transferType = interface->eps.ep[i].transferType;
 
-        dir = USB_EP_DIR(epInitStruct.endpointAddress);
-        if (dir == USB_IN && epInitStruct.transferType == USB_ENDPOINT_INTERRUPT) {
-            cdc->intr_in.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
+        dir = USB_EP_DIR(ep_init.endpointAddress);
+        if (dir == USB_IN && ep_init.transferType == USB_ENDPOINT_INTERRUPT) {
+            cdc->intr_in.ep = USB_EP_NUMBER(ep_init.endpointAddress);
             cdc->intr_in.is_busy = false;
             ep_cb.fn = usb_dev_cdc_interrupt_in;
         }
 
         ep_cb.param = cdc;
 
-        err = usb_dev_ep_init(cdc->handle, &epInitStruct, &ep_cb);
+        err = usb_dev_ep_init(cdc->handle, &ep_init, &ep_cb);
     }
 
     for (i = 0; i < interfaceList->count; i++) {
@@ -254,25 +255,23 @@ usb_dev_cdc_endpoints_init(usb_dev_cdc_t *cdc)
     cdc->data_itf = interface;
 
     for (i = 0; i < interface->eps.count; i++) {
-        usb_dev_ep_init_t epInitStruct;
-        usb_dev_ep_cb_t ep_cb;
-        epInitStruct.zlt = 0;
-        epInitStruct.endpointAddress = interface->eps.ep[i].ep_addr;
-        epInitStruct.maxPacketSize = interface->eps.ep[i].maxPacketSize;
-        epInitStruct.transferType = interface->eps.ep[i].transferType;
+        ep_init.zlt = 0;
+        ep_init.endpointAddress = interface->eps.ep[i].ep_addr;
+        ep_init.maxPacketSize = interface->eps.ep[i].maxPacketSize;
+        ep_init.transferType = interface->eps.ep[i].transferType;
 
-        dir = USB_EP_DIR(epInitStruct.endpointAddress);
-        if (dir == USB_IN && epInitStruct.transferType == USB_ENDPOINT_BULK) {
-            cdc->bulk_in.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
+        dir = USB_EP_DIR(ep_init.endpointAddress);
+        if (dir == USB_IN && ep_init.transferType == USB_ENDPOINT_BULK) {
+            cdc->bulk_in.ep = USB_EP_NUMBER(ep_init.endpointAddress);
             cdc->bulk_in.is_busy = false;
             ep_cb.fn = usb_dev_cdc_bulk_in;
-        } else if (dir == USB_OUT && epInitStruct.transferType == USB_ENDPOINT_BULK) {
-            cdc->bulk_out.ep = USB_EP_NUMBER(epInitStruct.endpointAddress);
+        } else if (dir == USB_OUT && ep_init.transferType == USB_ENDPOINT_BULK) {
+            cdc->bulk_out.ep = USB_EP_NUMBER(ep_init.endpointAddress);
             cdc->bulk_out.is_busy = false;
             ep_cb.fn = usb_dev_cdc_bulk_out;
         }
         ep_cb.param = cdc;
-        err = usb_dev_ep_init(cdc->handle, &epInitStruct, &ep_cb);
+        err = usb_dev_ep_init(cdc->handle, &ep_init, &ep_cb);
     }
 
     return err;
@@ -411,17 +410,31 @@ usb_dev_cdc_event(void *handle, uint32_t event, void *param)
                 reqParam.setupValue = req->setup->wValue;
                 reqParam.isSetup = req->is_setup;
                 switch (req->setup->bRequest) {
-                case USB_DEVICE_CDC_REQUEST_SEND_ENCAPSULATED_COMMAND: /* fallthrough */
-                case USB_DEVICE_CDC_REQUEST_GET_ENCAPSULATED_RESPONSE: /* fallthrough */
-                case USB_DEVICE_CDC_REQUEST_SET_COMM_FEATURE:          /* fallthrough */
-                case USB_DEVICE_CDC_REQUEST_GET_COMM_FEATURE:          /* fallthrough */
-                case USB_DEVICE_CDC_REQUEST_CLEAR_COMM_FEATURE:        /* fallthrough */
-                case USB_DEVICE_CDC_REQUEST_GET_LINE_CODING:           /* fallthrough */
-                case USB_DEVICE_CDC_REQUEST_SET_LINE_CODING:           /* fallthrough */
-                case USB_DEVICE_CDC_REQUEST_SET_CONTROL_LINE_STATE:    /* fallthrough */
-                case USB_DEVICE_CDC_REQUEST_SEND_BREAK:
-                    err = cdc->config->cb((class_handle_t)cdc, req->setup->bRequest, &reqParam);
+                case USB_DEVICE_CDC_REQUEST_SEND_ENCAPSULATED_COMMAND:
+                    err = cdc->config->cb((class_handle_t)cdc, CDC_EVT_SEND_ENCAPSULATED_COMMAND, &reqParam);
                     break;
+                case USB_DEVICE_CDC_REQUEST_GET_ENCAPSULATED_RESPONSE:
+                    err = cdc->config->cb((class_handle_t)cdc, CDC_EVT_GET_ENCAPSULATED_RESPONSE, &reqParam);
+                    break;
+                case USB_DEVICE_CDC_REQUEST_SET_COMM_FEATURE:
+                    err = cdc->config->cb((class_handle_t)cdc, CDC_EVT_SET_COMM_FEATURE, &reqParam);
+                    break;
+                case USB_DEVICE_CDC_REQUEST_GET_COMM_FEATURE:
+                    err = cdc->config->cb((class_handle_t)cdc, CDC_EVT_GET_COMM_FEATURE, &reqParam);
+                    break;
+                case USB_DEVICE_CDC_REQUEST_CLEAR_COMM_FEATURE:
+                    err = cdc->config->cb((class_handle_t)cdc, CDC_EVT_CLEAR_COMM_FEATURE, &reqParam);
+                    break;
+                case USB_DEVICE_CDC_REQUEST_GET_LINE_CODING:
+                    err = cdc->config->cb((class_handle_t)cdc, CDC_EVT_GET_LINE_CODING, &reqParam);
+                    break;
+                case USB_DEVICE_CDC_REQUEST_SET_LINE_CODING:
+                    err = cdc->config->cb((class_handle_t)cdc, CDC_EVT_SET_LINE_CODING, &reqParam);
+                    break;
+                case USB_DEVICE_CDC_REQUEST_SET_CONTROL_LINE_STATE:
+                    err = cdc->config->cb((class_handle_t)cdc, CDC_EVT_SET_CONTROL_LINE_STATE, &reqParam);
+                    break;
+                case USB_DEVICE_CDC_REQUEST_SEND_BREAK: /* fallthrough */
                 default:
                     err = USB_INVALID_REQ;
                     break;

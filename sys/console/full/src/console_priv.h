@@ -31,6 +31,8 @@ void uart_console_non_blocking_mode(void);
 int rtt_console_is_init(void);
 int rtt_console_init(void);
 int ble_monitor_console_is_init(void);
+int cdc_console_is_init(void);
+int cdc_console_init(void);
 
 #ifdef __cplusplus
 }

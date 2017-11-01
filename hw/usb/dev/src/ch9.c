@@ -523,7 +523,7 @@ _usb_device_control_cb_feedback(usb_device_handle handle, usb_setup_t *setup,
 
         err = usb_device_send_req(handle, USB_CONTROL_ENDPOINT, *buf, *len);
         //printf("err=%d, bmRequestType=0x%02x\n", err, setup->bmRequestType);
-#if 0 //FIXME: temporary test for stm32
+#if 1 //FIXME: temporary test for stm32
         if (!err && is_req_type_in(setup->bmRequestType)) {
             err = usb_device_recv_req(handle, USB_CONTROL_ENDPOINT, NULL, 0);
             //printf("recv_req, err=%d\n", err);
@@ -578,10 +578,10 @@ _usb_device_control_cb(usb_device_handle handle, usb_dev_ep_cb_msg_t *msg, void 
         setup->bRequest = st->bRequest;
         setup->bmRequestType = st->bmRequestType;
 
-        printf("bmRequestType=%02x, bRequest=%02x\n", setup->bmRequestType, setup->bRequest);
+        //printf("bmRequestType=%02x, bRequest=%02x\n", setup->bmRequestType, setup->bRequest);
         if (is_req_type_std(setup->bmRequestType)) {
             if (_std_req_table[setup->bRequest]) {
-                printf("bRequest=%02x, wValue=%04x\n", setup->bRequest, setup->wValue);
+                //printf("bRequest=%02x, wValue=%04x\n", setup->bRequest, setup->wValue);
                 err = _std_req_table[setup->bRequest](class, setup, &buf, &len);
             }
         } else {

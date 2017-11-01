@@ -348,7 +348,7 @@ _usb_device_notification(usb_dev_t *dev, usb_dev_cb_msg_t *msg)
 
     default:
         if (ep < MYNEWT_VAL(USB_DEVICE_CONFIG_ENDPOINTS)) {
-            printf("ep=%d, dir=%d\n", ep, dir);
+            //printf("ep=%d, dir=%d\n", ep, dir);
             epcb = &dev->epcbs[(ep << 1) | dir];
             if (epcb->fn) {
                 cb_msg.buf = msg->buf;
@@ -658,7 +658,7 @@ usb_dev_set_status(usb_device_handle handle, usb_device_status_t type, void *par
         }
         break;
     case kUSB_DeviceStatusAddress:
-#if 0
+#if 1
         if (((usb_dev_t *)handle)->state != kUSB_DeviceStateAddressing) {
             if (param) {
                 ((usb_dev_t *)handle)->deviceAddress = *(uint8_t *)param;
@@ -669,7 +669,7 @@ usb_dev_set_status(usb_device_handle handle, usb_device_status_t type, void *par
             err = _usb_device_control(handle, USB_DEV_CTRL_SET_ADDR,
                                         &((usb_dev_t *)handle)->deviceAddress);
         }
-#endif /* FIXME: the commented block above works on kinetis, below stm32 test */
+#else /* FIXME: the commented block above works on kinetis, below stm32 test */
         if (param) {
                 ((usb_dev_t *)handle)->deviceAddress = *(uint8_t *)param;
                 ((usb_dev_t *)handle)->state = kUSB_DeviceStateAddressing;
@@ -679,6 +679,7 @@ usb_dev_set_status(usb_device_handle handle, usb_device_status_t type, void *par
                     ((usb_dev_t *)handle)->state = kUSB_DeviceStateAddress;
                 }
         }
+#endif
         break;
     case kUSB_DeviceStatusBusResume:
         err = _usb_device_control(handle, USB_DEV_CTRL_RESUME, param);

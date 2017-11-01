@@ -541,6 +541,9 @@ console_is_init(void)
 #if MYNEWT_VAL(CONSOLE_BLE_MONITOR)
     return ble_monitor_console_is_init();
 #endif
+#if MYNEWT_VAL(CONSOLE_CDC)
+    return cdc_console_is_init();
+#endif
     return 0;
 }
 
@@ -589,6 +592,9 @@ console_pkg_init(void)
 #endif
 #if MYNEWT_VAL(CONSOLE_RTT)
     rc = rtt_console_init();
+#endif
+#if MYNEWT_VAL(CONSOLE_CDC)
+    rc = cdc_console_init();
 #endif
     SYSINIT_PANIC_ASSERT(rc == 0);
 }

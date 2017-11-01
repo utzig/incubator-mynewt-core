@@ -30,6 +30,8 @@ pkg.deps.CONSOLE_UART:
     - hw/drivers/uart
 pkg.deps.CONSOLE_RTT:
     - hw/drivers/rtt
+pkg.deps.CONSOLE_CDC:
+    - hw/usb/dev/class/cdc
 pkg.apis: console
 
 pkg.init:

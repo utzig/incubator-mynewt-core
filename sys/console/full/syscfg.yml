@@ -28,6 +28,9 @@ syscfg.defs:
     CONSOLE_BLE_MONITOR:
         description: 'Set console output to BLE Monitor'
         value: 0
+    CONSOLE_CDC:
+        description: 'Set console output to USB CDC/ACM'
+        value: 0
     CONSOLE_INPUT:
         description: 'Enable console input'
         value: 1
