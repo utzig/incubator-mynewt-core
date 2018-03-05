@@ -39,8 +39,8 @@
 #include "sysflash/sysflash.h"
 #include <os/os.h>
 #include <bsp/bsp.h>
-#include <hal/hal_gpio.h>
 #include <hal/hal_flash.h>
+#include <hal/hal_gpio.h>
 #include <console/console.h>
 #include <log/log.h>
 #include <stats/stats.h>
@@ -160,8 +160,6 @@ typedef struct _usb_cdc_vcom_t
     usb_device_handle deviceHandle;
     class_handle_t cdcAcmHandle;
     volatile uint8_t attach;
-    //xTaskHandle deviceTaskHandle;
-    //xTaskHandle applicationTaskHandle;
     uint8_t speed;
     volatile uint8_t startTransactions;
     uint8_t currentConfiguration;
@@ -206,6 +204,7 @@ static uint8_t s_countryCode[COMM_FEATURE_DATA_SIZE] = {
     (COUNTRY_SETTING >> 8) & 0xFF,
 };
 
+//FIXME: alignment added for testing
 USB_DATA_ALIGNMENT static usb_cdc_acm_info_t s_usbCdcAcmInfo = {
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, 0, 0, 0, 0, 0
 };
@@ -440,11 +439,24 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
              */
             err = usb_dev_cdc_send(handle, USB_CDC_VCOM_BULK_IN_ENDPOINT, NULL, 0);
         } else if (s_cdc_vcom.attach /*&& s_cdc_vcom.startTransactions*/) {
-            if (ep_param->buf || (!ep_param->buf && !ep_param->len)) {
+            if (ep_param->buf) {
                 /* User: add your own code for send complete event */
                 /* Schedule buffer for next receive event */
                 err = usb_dev_cdc_recv(handle, USB_CDC_VCOM_BULK_OUT_ENDPOINT, s_currRecvBuf,
                                        g_UsbDeviceCdcVcomDicEndpoints[0].maxPacketSize);
+                if (err) {
+                    /* TODO */
+                }
+            } else if (!ep_param->buf && !ep_param->len) {
+                /* FIXME: this would send a status response but it does not
+                 * seem to be required.
+                 *
+                 * err = usb_dev_cdc_recv(handle, USB_CDC_VCOM_BULK_OUT_ENDPOINT, s_currRecvBuf,
+                 *                        g_UsbDeviceCdcVcomDicEndpoints[0].maxPacketSize);
+                 */
+                if (err) {
+                    /* TODO */
+                }
             }
         }
         break;
@@ -457,6 +469,9 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
                 /* Schedule buffer for next receive event */
                 err = usb_dev_cdc_recv(handle, USB_CDC_VCOM_BULK_OUT_ENDPOINT, s_currRecvBuf,
                                        g_UsbDeviceCdcVcomDicEndpoints[0].maxPacketSize);
+                if (err) {
+                    /* TODO */
+                }
             }
         }
         break;
@@ -533,11 +548,10 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
         info->serialStateBuf[1] = USB_DEVICE_CDC_NOTIF_SERIAL_STATE; /* bNotification */
         info->serialStateBuf[2] = 0x00;                              /* wValue */
         info->serialStateBuf[3] = 0x00;
-        info->serialStateBuf[4] = 0x00; /* wIndex */
+        info->serialStateBuf[4] = req_param->interfaceIndex;
         info->serialStateBuf[5] = 0x00;
         info->serialStateBuf[6] = UART_BITMAP_SIZE; /* wLength */
         info->serialStateBuf[7] = 0x00;
-        info->serialStateBuf[4] = req_param->interfaceIndex;
 
         *((uint16_t *)&info->serialStateBuf[NOTIF_PACKET_SIZE + UART_BITMAP_SIZE - 2]) = info->uartState;
         len = (uint32_t)(NOTIF_PACKET_SIZE + UART_BITMAP_SIZE);
@@ -545,7 +559,7 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
             err = usb_dev_cdc_send(handle, USB_CDC_VCOM_INTERRUPT_IN_ENDPOINT, info->serialStateBuf, len);
             if (err) {
                 //FIXME
-                //printf("CDC_EVT_SET_CONTROL_LINE_STATE error!\n");
+                assert(0);
             }
             ((usb_dev_cdc_t *)handle)->has_sent = 1;
         }
@@ -568,8 +582,8 @@ usb_device_cdc_cb(class_handle_t handle, uint32_t event, void *param)
             }
         }
         break;
-    //default:
-        //printf("huh!?\n");
+    default:
+        assert(0);
     }
 
     return err;
@@ -580,13 +594,11 @@ usb_device_cb(usb_device_handle handle, uint32_t event, void *param)
 {
     int err = USB_ERR;
 
-    //printf("event=%lu\n", event);
     switch (event) {
     case kUSB_DeviceEventBusReset:
         s_cdc_vcom.attach = 0;
         break;
     case kUSB_DeviceEventSetConfiguration:
-        //printf("set configuration\n");
         if (param) {
             s_cdc_vcom.attach = 1;
             s_cdc_vcom.currentConfiguration = *((uint8_t *)param);
@@ -638,7 +650,7 @@ usb_app_task_handler(void *arg)
     int i;
     int ch;
     int recv = 0;
-    int sleep = 1;
+    int sleep;
 
     while (1) {
         sleep = 1;
@@ -669,13 +681,19 @@ usb_app_task_handler(void *arg)
                     /* TODO */
                 }
             } else if (recv) {
-                err = usb_dev_cdc_send(s_cdc_vcom.cdcAcmHandle,
-                        USB_CDC_VCOM_BULK_IN_ENDPOINT, NULL, 0);
+                /* FIXME: this would send a status response but it does not
+                 * seem to be required.
+                 *
+                 * err = usb_dev_cdc_send(s_cdc_vcom.cdcAcmHandle,
+                 *           USB_CDC_VCOM_BULK_IN_ENDPOINT, NULL, 0);
+                 */
+                if (err) {
+                    /* TODO */
+                }
                 sleep = recv = 0;
             }
         }
         if (last_attach != s_cdc_vcom.attach) {
-            //printf("attach=%d, startTransaction=%d\n", s_cdc_vcom.attach, s_cdc_vcom.startTransactions);
             last_attach = s_cdc_vcom.attach;
         }
         if (sleep) {
@@ -765,7 +783,6 @@ cdc_console_init(void)
 
     err = usb_device_class_init(0, &s_cdcAcmConfigList, &s_cdc_vcom.deviceHandle);
     if (err) {
-        //printf("USB device init failed\r\n");
         return -1;
     }
 
