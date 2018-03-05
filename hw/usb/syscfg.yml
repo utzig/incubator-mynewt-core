@@ -98,4 +98,3 @@ syscfg.defs:
     USB_DESC_STRING5:
         description: "USB string descriptor 5"
         value: '""'
-

@@ -522,14 +522,14 @@ _usb_device_control_cb_feedback(usb_device_handle handle, usb_setup_t *setup,
         /* stage == kUSB_DeviceControlPipeSetupStage is setup (not in) */
 
         err = usb_device_send_req(handle, USB_CONTROL_ENDPOINT, *buf, *len);
-        //printf("err=%d, bmRequestType=0x%02x\n", err, setup->bmRequestType);
-#if 1 //FIXME: temporary test for stm32
+
+#if MYNEWT_VAL(USB_DEV_IS_KINETIS)
         if (!err && is_req_type_in(setup->bmRequestType)) {
             err = usb_device_recv_req(handle, USB_CONTROL_ENDPOINT, NULL, 0);
-            //printf("recv_req, err=%d\n", err);
         }
 #endif
     }
+
     return err;
 }
 
