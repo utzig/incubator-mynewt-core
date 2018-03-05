@@ -21,7 +21,7 @@
 syscfg.defs:
     MCU_LITTLE_ENDIAN:
         description: 'USB stack is built for little endian MCU.'
-        value: 0
+        value: 1
 
     MCU_BIG_ENDIAN:
         description: 'USB stack is built for big endian MCU.'
@@ -29,6 +29,11 @@ syscfg.defs:
 
     USB_DEV:
         description: 'USB device support.'
+        value: 0
+
+    USB_DEV_IS_KINETIS:
+        # FIXME
+        description: 'Kinetis needs extra set address messaging.'
         value: 0
 
     USB_HOST:
