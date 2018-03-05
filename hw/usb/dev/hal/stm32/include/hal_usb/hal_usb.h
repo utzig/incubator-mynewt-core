@@ -47,10 +47,10 @@ enum {
 enum
 {
     EP0_SETUP,
-    EP0_DATA_IN,
-    EP0_DATA_OUT,
-    EP0_STATUS_IN,
-    EP0_STATUS_OUT,
+    EP_DATA_IN,
+    EP_DATA_OUT,
+    EP_STATUS_IN,
+    EP_STATUS_OUT,
 };
 
 struct ep_xfer
@@ -62,8 +62,8 @@ struct ep_xfer
 typedef struct
 {
     uint8_t        state;
-    struct ep_xfer in[0];
-    struct ep_xfer out[0];
+    struct ep_xfer in;
+    struct ep_xfer out;
 } stm32_usb_dev_ep_state_t;
 
 typedef struct
@@ -88,7 +88,7 @@ typedef struct
                                           This parameter can be set to ENABLE or DISABLE */
     void                     *pData;       /*!< Pointer to upper stack Handler */
 
-    stm32_usb_dev_ep_state_t ep0; //FIXME
+    stm32_usb_dev_ep_state_t ep[16]; //FIXME
 
     /* TODO: do we need this? */
 #if 0
