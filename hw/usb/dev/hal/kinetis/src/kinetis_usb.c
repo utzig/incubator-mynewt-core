@@ -277,7 +277,6 @@ _kinetis_usb_dev_ep_init(kinetis_usb_dev_state_t *state, usb_dev_ep_init_t *epIn
      * control out endpoint.
      */
     if (ep == 0 && dir == USB_OUT) {
-        //printf("_prime 1\n");
         _prime_next_setup(state);
     }
 
@@ -333,7 +332,6 @@ _kinetis_usb_dev_ep_unstall(kinetis_usb_dev_state_t *state, uint8_t ep_addr)
 
     epstate = &state->epstate[(ep << 1) | dir];
 
-    //printf("unstall 0x%02x\n", ep_addr);
     epstate->u.bm.stalled = 0;
     epstate->u.bm.data0 = 0;
 
@@ -351,7 +349,6 @@ _kinetis_usb_dev_ep_unstall(kinetis_usb_dev_state_t *state, uint8_t ep_addr)
     state->registers->ENDPOINT[ep].ENDPT &= ~USB_ENDPT_EPSTALL_MASK;
 
     if (ep == 0 && dir == USB_OUT) {
-        //printf("_prime 2\n");
         _prime_next_setup(state);
     }
 
@@ -556,7 +553,7 @@ static void
 _kinetis_usb_dev_vbus_rising(kinetis_usb_dev_state_t *state)
 {
     usb_dev_cb_msg_t msg;
-    volatile USB_Type *regs = state->regs;
+    volatile USB_Type *regs = state->registers;
 
     regs->MISCCTRL &= ~USB_MISCCTRL_VREDG_EN_MASK;
     regs->MISCCTRL |= USB_MISCCTRL_VREDG_EN_MASK;
@@ -569,9 +566,10 @@ static void
 _kinetis_usb_dev_vbus_falling(kinetis_usb_dev_state_t *state)
 {
     usb_dev_cb_msg_t msg;
+    volatile USB_Type *regs = state->registers;
 
-    state->registers->MISCCTRL &= ~USB_MISCCTRL_VFEDG_EN_MASK;
-    state->registers->MISCCTRL |= USB_MISCCTRL_VFEDG_EN_MASK;
+    regs->MISCCTRL &= ~USB_MISCCTRL_VFEDG_EN_MASK;
+    regs->MISCCTRL |= USB_MISCCTRL_VFEDG_EN_MASK;
 
     _init_cb_msg_with_code(&msg, kUSB_DeviceNotifyDetach);
     usb_dev_notify(state->dev, &msg);
@@ -634,7 +632,7 @@ _kinetis_usb_init(uint8_t controllerId,
     state->registers = (volatile USB_Type *) USB0_BASE;
     regs = state->registers;
 
-    state->dmaAlignBuffer = (uint8_t *) &g_kinetis_usb_dma_buffer[0];
+    state->dmaAlignBuffer = (uint8_t *)g_kinetis_usb_dma_buffer;
 
     regs->ISTAT = 0xff;
 
@@ -832,15 +830,6 @@ _kinetis_usb_control(usb_dev_ctrl_handle handle,
 
 #if MYNEWT_VAL(USB_DEVICE_CONFIG_REMOTE_WAKEUP)
     dev = (usb_dev_t *) state->dev;
-#endif
-
-#if 0
-    if (g_buf[0] != 0xff) {
-        printf("-> ");
-        for (int i=0; i<8; i++) printf("[%02x]", g_buf[i]);
-        printf(" \n");
-        g_buf[0]=0xff;
-    }
 #endif
 
     switch (type) {
