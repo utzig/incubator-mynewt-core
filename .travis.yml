@@ -16,14 +16,8 @@
 # under the License.
 
 language: go
-
-_addons: &addon_conf
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - gcc-7-multilib
-      - linux-libc-dev:i386
+dist: trusty
+sudo: required
 
 go:
   - "1.10"
@@ -31,122 +25,45 @@ go:
 git:
   depth: false
 
-matrix:
-  include:
-    # newt build <targets>
-    - os: linux
-      env:
-        - TEST=BUILD_TARGETS
-        - VM_AMOUNT=4
-        - TARGET_SET=1
-    - os: linux
-      env:
-        - TEST=BUILD_TARGETS
-        - VM_AMOUNT=4
-        - TARGET_SET=2
-    - os: linux
-      env:
-        - TEST=BUILD_TARGETS
-        - VM_AMOUNT=4
-        - TARGET_SET=3
-    - os: linux
-      env:
-        - TEST=BUILD_TARGETS
-        - VM_AMOUNT=4
-        - TARGET_SET=4
-
-    # newt build <blinky-for-BSP>
-    - os: linux
-      env:
-        - TEST=BUILD_BLINKY
-        - VM_AMOUNT=4
-        - TARGET_SET=1
-    - os: linux
-      env:
-        - TEST=BUILD_BLINKY
-        - VM_AMOUNT=4
-        - TARGET_SET=2
-    - os: linux
-      env:
-        - TEST=BUILD_BLINKY
-        - VM_AMOUNT=4
-        - TARGET_SET=3
-    - os: linux
-      env:
-        - TEST=BUILD_BLINKY
-        - VM_AMOUNT=4
-        - TARGET_SET=4
-
-    # newt test all (Linux)
-    - os: linux
-      addons: *addon_conf
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=1
-    - os: linux
-      addons: *addon_conf
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=2
-    - os: linux
-      addons: *addon_conf
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=3
-
-    # newt test all (osx)
-    - os: osx
-      osx_image: xcode9.2
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=1
-    - os: osx
-      osx_image: xcode9.2
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=2
-    - os: osx
-      osx_image: xcode9.2
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=3
-
 before_install:
-  - printenv
-  - export GOPATH=$HOME/gopath
-  - go version
+  - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
 
 install:
-  - git clone https://github.com/runtimeco/mynewt-travis-ci $HOME/ci
+  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+  #- sudo apt-get -qq update
+  #- sudo apt-get install libc6-dev-i386 gcc-7-multilib gcc-arm-none-eabi libnewlib-arm-none-eabi
+  - sudo apt-get install libc6-dev-i386 gcc-multilib g++-multilib
+  #- sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+  - git clone -b testing https://github.com/utzig/mynewt-travis-ci $HOME/ci
   - chmod +x $HOME/ci/*.sh
   - $HOME/ci/${TRAVIS_OS_NAME}_travis_install.sh
 
 before_script:
   - newt version
   - gcc --version
-  - if [ "${TEST}" != "TEST_ALL" ]; then arm-none-eabi-gcc --version; fi
-  - cp -R $HOME/ci/mynewt-core-project.yml project.yml
-  - cp -R $HOME/ci/mynewt-core-targets targets
+  #- arm-none-eabi-gcc --version
   - newt install
-    # pass in the number of target sets
-  - $HOME/ci/prepare_test.sh $VM_AMOUNT
 
-script:
-  # the following list of targets are known to fail building blinky, or
-  # might have extra dependencies hard to provide, non-common toolchains, etc
-  # NOTE: "native" is here to avoid having to install gcc-multilib
-  - export IGNORED_BSPS="ci40 embarc_emsk hifive1 native-armv7 native-mips
-                         pic32mx470_6lp_clicker pic32mz2048_wi-fire sensorhub
-                         native"
-  - $HOME/ci/run_test.sh
+script: ""
+
+after_script:
+  - grep "\[ERROR\]" /home/travis/build/apache/mynewt-core/cov-int/build-log.txt | head -n 100
+
+addons:
+  coverity_scan:
+    project:
+      name: "apache/mynewt-core"
+      version: 1.4.0
+      description: "An OS to build, deploy and securely manage billions of devices"
+    notification_email: utzig@apache.org
+    build_command_prepend: "cov-configure --gcc"
+    build_command: "cov-build --dir cov-int newt test --executeShell all"
+    branch_pattern: "coverity_scan"
+
+env:
+  global:
+    - secure: "CN2ky7nTp9xxr2gMQI1mF8ZA+oBEAaasgm/9wijYu1m2tVUqLqoLsh4f60/h+mZzFHeVDDlT4+aEfLQguDufoS05p30fRPqaBMNSzVJxHhpoy5qR7bSEpHL4fvNkmdJ//8o57z1NCR8O5R/m5kE//Rc/4eprwopIRl4tIliD9P84A9GzX62IrSbCRa3LMQdp93KA1t8xiX+w/oAoQEdFz1PjRNoGyXmqP80TWsY+1x6xZjEBXDArYMhSrpj0Bo38SSqdRFayg5PcNOa2zKsoyuLV1tXFhVEuvEvXlb6ruLy0m2HLG24vWYaJ7DeyfGb/Qzb9r+TxfXE/plp2n9Bq7b5x1idWxFpV1gvuks2bEOlaBm9z8a9QpE+zq3rFAFinb0N0pNCnJQVYHIbdOGxvXYhQNVE2ze8HAQZv0vsVP35JB8qUttfUdaTyUGyT7rpYZyiN4/AK0VI6Qum2DovXRf0gdwzPDGq5uBpkJ8QwDyA9Q1LfKC0l2CqS+x+2Pd2l8AtS1LFxN7nvLu3vljA0llayEvxeJjvLu/2sGHk0MNAdN03e/mkNSqF1wyOy3aWOm74ctQgzmXbNHWhsW3nrto1kQqc+BtXJINFGPw0kJkUDHnqCQSg2PL+LApLf0+etK6QQg59HmqGfLMpB0HaUMd/JR/OQUia0flftQL+mmSY="
 
 cache:
   directories:
   - $HOME/TOOLCHAIN
-  - $HOME/Library/Caches/Homebrew
