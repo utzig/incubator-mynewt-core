@@ -247,6 +247,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
+#include <assert.h>
 
 /** @addtogroup STM32F1xx_HAL_Driver
   * @{
@@ -3397,6 +3398,7 @@ HAL_StatusTypeDef HAL_I2C_IsDeviceReady(I2C_HandleTypeDef *hi2c, uint16_t DevAdd
     /* Process Unlocked */
     __HAL_UNLOCK(hi2c);
 
+    assert(0);
     return HAL_ERROR;
   }
   else
