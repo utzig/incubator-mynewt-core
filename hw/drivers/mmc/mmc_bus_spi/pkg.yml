@@ -17,8 +17,11 @@
 # under the License.
 #
 
-pkg.name: hw/drivers/mmc
-pkg.description: MMC interfaces
+pkg.name: hw/drivers/mmc/mmc_bus_spi
+pkg.description: MMC over SPI
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
 pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
+
+pkg.deps:
+    - hw/hal

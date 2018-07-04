@@ -21,6 +21,7 @@
 #define __MMC_H__
 
 #include "os/mynewt.h"
+#include <mmc/mmc_bus.h>
 #include <disk/disk.h>
 
 #ifdef __cplusplus
@@ -56,7 +57,7 @@ extern struct disk_ops mmc_ops;
  * @return 0 on success, non-zero on failure
  */
 int
-mmc_init(int spi_num, void *spi_cfg, int ss_pin);
+mmc_init(struct mmc_bus *bus, uint8_t *mmc_id);
 
 /**
  * Read data from MMC

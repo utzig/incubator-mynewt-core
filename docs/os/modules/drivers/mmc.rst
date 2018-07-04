@@ -10,7 +10,7 @@ Initialization
 
 .. code:: c
 
-    int mmc_init(int spi_num, void *spi_cfg, int ss_pin)
+    int mmc_init(struct mmc_transport *bus)
 
 Initializes the mmc driver to be used by a FS.
 
@@ -24,6 +24,7 @@ Dependencies
 
 To include the ``mmc`` driver on a project, just include it as a
 dependency in your pkg.yml:
+FIXME: transport
 
 ::
 
