@@ -39,7 +39,11 @@ syscfg.defs:
         value: 0
 
     LPS22HB_ONB:
-        description: 'Enable onboard LPS22HB pressure sensor'
+        description: 'Enable onboard LPS22HB pressure/temperature sensor'
+        value:  0
+
+    LSM6DSL_ONB:
+        description: 'Enable onboard LSM6DSL accelerometer/gyroscope sensor'
         value:  0
 
 syscfg.vals:

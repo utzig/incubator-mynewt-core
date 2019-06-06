@@ -39,6 +39,11 @@
 static struct lps33hw lps22hb;
 #endif
 
+#if MYNEWT_VAL(LSM6DSL_ONB)
+#include "lsm6dso/lsm6dso.h"
+static struct lsm6dso lsm6dsl;
+#endif
+
 #include <stm32l475xx.h>
 #include <stm32l4xx_hal_rcc.h>
 #include <stm32l4xx_hal_pwr.h>
@@ -112,8 +117,6 @@ struct stm32_hal_spi_cfg spi0_cfg = {
 /* XXX: MP34DT01: ?
  *      HTS221: I2C2 0x5f
  *      LIS3MDL: I2C2 0x1e
- *      LSM6DSL: I2C2 0x6a
- *      LPS22HB: I2C2 0x5d
  *      VL53L0X: I2C2 0x29
  *      M24SR64-Y: I2Cx 0x56
  *      STSAFE-A: I2Cx 0x20
@@ -126,6 +129,14 @@ static const struct sensor_itf i2c_0_itf_lps = {
     .si_type = SENSOR_ITF_I2C,
     .si_num = 1,
     .si_addr = 0x5d,
+};
+#endif
+
+#if MYNEWT_VAL(LSM6DSL_ONB)
+static const struct sensor_itf i2c_0_itf_lsm = {
+    .si_type = SENSOR_ITF_I2C,
+    .si_num = 1,
+    .si_addr = 0x6a,
 };
 #endif
 
@@ -187,10 +198,64 @@ config_lps22hb_sensor(void)
     return rc;
 }
 
-static void
+int
+config_lsm6dsl_sensor(void)
+{
+    int rc = 0;
+
+#if MYNEWT_VAL(LSM6DSL_ONB)
+    struct os_dev *dev;
+    struct lsm6dso_cfg cfg;
+
+    cfg.gyro_fs = 0;
+    cfg.gyro_rate = 0;
+    cfg.acc_fs = 0;
+    cfg.acc_rate = 0;
+    cfg.fifo.mode = 0;
+    cfg.fifo.wtm = 0;
+
+    cfg.wk.wake_up_ths = 0;
+    cfg.wk.wake_up_dur = 0;
+    cfg.wk.sleep_duration = 0;
+    cfg.wk.hpf_slope = 0;
+
+    cfg.ff.freefall_dur = 0;
+    cfg.ff.freefall_ths = 0;
+
+    cfg.tap.en_x = 0;
+    cfg.tap.en_y = 0;
+    cfg.tap.en_z = 0;
+    cfg.tap.en_dtap = 0;
+    cfg.tap.tap_prio = 0;
+    cfg.tap.tap_ths = 0;
+    cfg.tap.dur = 0;
+    cfg.tap.quiet = 0;
+    cfg.tap.shock = 0;
+
+    cfg.orientation.en_4d = 0;
+    cfg.orientation.ths_6d = LSM6DSO_6D_THS_80_DEG;
+
+    cfg.notif_cfg = NULL;
+    cfg.lc_s_mask = SENSOR_TYPE_GYROSCOPE | SENSOR_TYPE_ACCELEROMETER;
+    cfg.read.int_cfg = 0;
+    cfg.read.int_num = 0;
+    cfg.read.mode = 0;
+
+    dev = (struct os_dev *) os_dev_open("lsm6dsl_0", OS_TIMEOUT_NEVER, NULL);
+    assert(dev != NULL);
+
+    rc = lsm6dso_config((struct lsm6dso *) dev, &cfg);
+
+    os_dev_close(dev);
+#endif
+
+    return rc;
+}
+
+static int
 sensor_dev_create(void)
 {
-    int rc;
+    int rc = 0;
     (void)rc;
 
 #if MYNEWT_VAL(LPS22HB_ONB)
@@ -199,6 +264,15 @@ sensor_dev_create(void)
                        (void *)&i2c_0_itf_lps);
     assert(rc == 0);
 #endif
+
+#if MYNEWT_VAL(LSM6DSL_ONB)
+    rc = os_dev_create((struct os_dev *) &lsm6dsl, "lsm6dsl_0",
+                       OS_DEV_INIT_PRIMARY, 0, lsm6dso_init,
+                       (void *)&i2c_0_itf_lsm);
+    assert(rc == 0);
+#endif
+
+    return rc;
 }
 
 void
@@ -251,7 +325,8 @@ hal_bsp_init(void)
     assert(rc == 0);
 #endif
 
-    sensor_dev_create();
+    rc = sensor_dev_create();
+    assert(rc == 0);
 }
 
 /**

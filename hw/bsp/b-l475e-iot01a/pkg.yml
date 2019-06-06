@@ -45,5 +45,9 @@ pkg.deps.UART_1:
 pkg.deps.LPS22HB_ONB:
     - "@apache-mynewt-core/hw/drivers/sensors/lps33hw"
 
+pkg.deps.LSM6DSL_ONB:
+    - "@apache-mynewt-core/hw/drivers/sensors/lsm6dso"
+
 pkg.init:
     config_lps22hb_sensor: 400
+    config_lsm6dsl_sensor: 400
