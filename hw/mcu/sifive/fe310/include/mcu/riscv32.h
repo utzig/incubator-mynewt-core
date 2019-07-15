@@ -17,42 +17,9 @@
  * under the License.
  */
 
-#ifndef _OS_ARCH_RV32IMAC_H
-#define _OS_ARCH_RV32IMAC_H
+#ifndef __MCU_RISCV32_H__
+#define __MCU_RISCV32_H__
 
-#include <stdint.h>
-#include "mcu/rv32imac.h"
+#include "mcu/fe310.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* CPU status register */
-typedef uint32_t os_sr_t;
-
-/* Stack element */
-typedef uint32_t os_stack_t;
-
-/* Stack sizes for common OS tasks */
-#define OS_SANITY_STACK_SIZE (96)
-#define OS_IDLE_STACK_SIZE (64)
-
-void plic_default_isr(int num);
-
-/* Include common arch definitions and APIs */
-#include "os/arch/common.h"
-
-static inline int
-os_arch_in_isr(void)
-{
-    /*
-     * TODO: Not implemented yet, add actual code to check it
-     */
-    return 0;
-}
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _OS_ARCH_RV32IMAC_H */
+#endif /* __MCU_RISCV32_H__ */
