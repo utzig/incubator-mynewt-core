@@ -42,7 +42,9 @@ handle_trap(uint32_t cause, void *fault_address, void *exception_frame)
     hal_system_reset();
 }
 
+#if 0
 void nvic_default_isr(int num)
 {
 
 }
+#endif

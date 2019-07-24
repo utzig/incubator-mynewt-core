@@ -64,43 +64,6 @@ struct context_switch_frame {
     uint32_t  a7;
 };
 
-uint32_t
-mtime_lo(void)
-{
-    return CLINT_REG(CLINT_MTIME);
-}
-
-uint32_t
-mtime_hi(void)
-{
-    return CLINT_REG(CLINT_MTIME + 4);
-}
-
-uint64_t
-get_timer_value(void)
-{
-    while (1) {
-        uint32_t hi = mtime_hi();
-        uint32_t lo = mtime_lo();
-        if (hi == mtime_hi())
-            return ((uint64_t)hi << 32) | lo;
-    }
-}
-
-void
-set_mtimecmp(uint64_t time)
-{
-    CLINT_REG(CLINT_MTIMECMP + 4) = -1;
-    CLINT_REG(CLINT_MTIMECMP) = (uint32_t) time;
-    CLINT_REG(CLINT_MTIMECMP + 4) = (uint32_t) (time >> 32);
-}
-
-unsigned long
-get_timer_freq()
-{
-  return 32768;
-}
-
 /* XXX: determine how to deal with running un-privileged */
 /* only priv currently supported */
 uint32_t os_flags = OS_RUN_PRIV;
@@ -121,6 +84,12 @@ timer_handler(void)
     os_time_advance(1);
 }
 
+void SysTick_Handler(void)
+{
+    SystemClearSystickFlag();
+    timer_handler();
+}
+
 void
 os_arch_ctx_sw(struct os_task *t)
 {
@@ -128,34 +97,35 @@ os_arch_ctx_sw(struct os_task *t)
         os_sched_ctx_sw_hook(t);
     }
 
-    /*
-     * This request software interrupt that is used for contect switching
-     */
-    CLINT_REG(CLINT_MSIP) = 1;
+    __ASM volatile ("ecall");
 }
 
 os_sr_t
 os_arch_save_sr(void)
 {
-    uint32_t isr_ctx;
+    uint32_t mstatus;
 
-    isr_ctx = clear_csr(mstatus, MSTATUS_MIE) & MSTATUS_MIE;
+    asm volatile ("csrrci %0, mstatus, 8" : "=r"(mstatus));
 
-    return isr_ctx;
+    return mstatus & 8;
 }
 
 void
 os_arch_restore_sr(os_sr_t isr_ctx)
 {
     if (isr_ctx) {
-        set_csr(mstatus, MSTATUS_MIE);
+        asm("csrsi mstatus, 8");
     }
 }
 
 int
 os_arch_in_critical(void)
 {
-    return !(read_csr(mstatus) & MSTATUS_MIE);
+    uint32_t mstatus;
+
+    asm volatile ("csrrci %0, mstatus, 8" : "=r"(mstatus));
+
+    return !(mstatus & 8);
 }
 
 /* assumes stack_top will be 8 aligned */
@@ -194,6 +164,7 @@ os_arch_os_init(void)
     os_error_t err = OS_OK;
     int i;
 
+#if 0
     /* Set all external interrupts to default handler */
     //FIXME
     for (i = 0; i < NUMBER_OF_INT_VECTORS; ++i) {
@@ -201,6 +172,7 @@ os_arch_os_init(void)
         /* Default priority set to 0, never interrupt */
         //PLIC_REG(PLIC_PRIORITY_OFFSET + i * 4) = 0;
     }
+#endif
 
     /* Disable all interrupts */
     for (i = 0; i < NUMBER_OF_INT_VECTORS; i++) {
@@ -211,7 +183,8 @@ os_arch_os_init(void)
     //PLIC_REG(PLIC_THRESHOLD_OFFSET) = 0;
 
     /* Set main trap handler */
-    write_csr(mtvec, &trap_entry);
+    //FIXME write_csr(mtvec, &trap_entry);
+    //__ASM volatile("csrw 0x305, %0" :: "r"((uint32_t)&trap_entry));
 
     os_arch_init();
 
@@ -226,12 +199,13 @@ os_arch_start(void)
 
     /* Get the highest priority ready to run to set the current task */
     t = os_sched_next_task();
+    os_sched_set_current_task(t);
 
     /* Clean software interrupt, and enable it */
-    CLINT_REG(CLINT_MSIP) = 0;
-    set_csr(mie, MIP_MSIP);
+    //CLINT_REG(CLINT_MSIP) = 0;
+    //set_csr(mie, MIP_MSIP);
     /* Enable external interrupts */
-    set_csr(mie, MIP_MEIP);
+    //set_csr(mie, MIP_MEIP);
 
     /* Intitialize and start system clock timer, this enable timer interrupt */
     os_tick_init(OS_TICKS_PER_SEC, OS_TICK_PRIO);
@@ -252,7 +226,7 @@ os_arch_start(void)
     os_sched_set_current_task(&fake_task);
 
     /* Enable interrupts */
-    set_csr(mstatus, MSTATUS_MIE);
+    asm("csrsi mstatus, 8");
 
     /* This should not be reached */
     return (uint32_t) (t->t_arg);
