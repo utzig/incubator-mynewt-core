@@ -19,7 +19,6 @@
 
 #include <stddef.h>
 #include <inttypes.h>
-#include <mcu/cortex_m4.h>
 
 /**
  * Boots the image described by the supplied image header.
@@ -29,6 +28,8 @@
 void
 hal_system_start(void *img_start)
 {
+    (void)img_start;
+#if 0
     /* Turn off interrupts. */
     __disable_irq();
 
@@ -48,6 +49,7 @@ hal_system_start(void *img_start)
 
     /* Jump to image. */
     entry();
+#endif
 
     /* Should never reach this point */
     while (1)

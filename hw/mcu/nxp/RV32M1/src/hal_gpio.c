@@ -17,7 +17,6 @@
  * under the License.
  */
 #include "hal/hal_gpio.h"
-#include "mcu/cmsis_nvic.h"
 #include <stdlib.h>
 #include <assert.h>
 
@@ -39,8 +38,7 @@ static clock_ip_name_t const s_portClocks[] = PORT_CLOCKS;
 uint16_t
 hal_to_fsl_pull(hal_gpio_pull_t pull)
 {
-    switch ((int)pull)
-    {
+    switch ((int)pull) {
     case HAL_GPIO_PULL_UP:
         return kPORT_PullUp;
     case HAL_GPIO_PULL_DOWN:

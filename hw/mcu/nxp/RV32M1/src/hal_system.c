@@ -18,12 +18,12 @@
  */
 
 #include "os/mynewt.h"
-#include "mcu/cortex_m4.h"
 #include "hal/hal_system.h"
 
 int hal_debugger_connected(void)
 {
-    return CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk;
+    //FIXME
+    return 0;
 }
 
 void hal_system_reset(void)
@@ -38,8 +38,9 @@ void hal_system_reset(void)
             /*
              * If debugger is attached, breakpoint here.
              */
-            asm("bkpt");
+            //asm("bkpt");
         }
-        NVIC_SystemReset();
+        //FIXME
+        //NVIC_SystemReset();
     }
 }

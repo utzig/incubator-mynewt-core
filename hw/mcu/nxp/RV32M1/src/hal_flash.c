@@ -17,56 +17,48 @@
  * under the License.
  */
 
-/*
- * Internal flash for MK64F12.
- * Size of the flash depends on the MCU model, flash is memory mapped
- * and is divided to 2k sectors throughout.
- * Programming is done 2 bytes at a time.
- */
-
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
 #include "os/mynewt.h"
 #include <hal/hal_flash_int.h>
 
-#include "MK64F12.h"
 #include "fsl_flash.h"
 
 /*
  * Alignment restriction on writes.
  */
-#define MK64F12_FLASH_ALIGN     8
+#define RV32M1_FLASH_ALIGN     8
 
-static int mk64f12_flash_read(const struct hal_flash *dev, uint32_t address,
+static int rv32m1_flash_read(const struct hal_flash *dev, uint32_t address,
         void *dst, uint32_t num_bytes);
-static int mk64f12_flash_write(const struct hal_flash *dev, uint32_t address,
+static int rv32m1_flash_write(const struct hal_flash *dev, uint32_t address,
         const void *src, uint32_t num_bytes);
-static int mk64f12_flash_erase_sector(const struct hal_flash *dev,
+static int rv32m1_flash_erase_sector(const struct hal_flash *dev,
         uint32_t sector_address);
-static int mk64f12_flash_sector_info(const struct hal_flash *dev, int idx,
+static int rv32m1_flash_sector_info(const struct hal_flash *dev, int idx,
         uint32_t *addr, uint32_t *sz);
-static int mk64f12_flash_init(const struct hal_flash *dev);
+static int rv32m1_flash_init(const struct hal_flash *dev);
 
-static const struct hal_flash_funcs mk64f12_flash_funcs = {
-    .hff_read = mk64f12_flash_read,
-    .hff_write = mk64f12_flash_write,
-    .hff_erase_sector = mk64f12_flash_erase_sector,
-    .hff_sector_info = mk64f12_flash_sector_info,
-    .hff_init = mk64f12_flash_init
+static const struct hal_flash_funcs rv32m1_flash_funcs = {
+    .hff_read = rv32m1_flash_read,
+    .hff_write = rv32m1_flash_write,
+    .hff_erase_sector = rv32m1_flash_erase_sector,
+    .hff_sector_info = rv32m1_flash_sector_info,
+    .hff_init = rv32m1_flash_init
 };
 
-static flash_config_t mk64f12_config;
+static flash_config_t rv32m1_config;
 
-struct hal_flash mk64f12_flash_dev = {
+struct hal_flash rv32m1_flash_dev = {
     /* Most items are set after FLASH_Init() */
-    .hf_itf = &mk64f12_flash_funcs,
-    .hf_align = MK64F12_FLASH_ALIGN,
+    .hf_itf = &rv32m1_flash_funcs,
+    .hf_align = RV32M1_FLASH_ALIGN,
     .hf_erased_val = 0xff,
 };
 
 static int
-mk64f12_flash_read(const struct hal_flash *dev, uint32_t address,
+rv32m1_flash_read(const struct hal_flash *dev, uint32_t address,
         void *dst, uint32_t num_bytes)
 {
     memcpy(dst, (void *)address, num_bytes);
@@ -74,20 +66,20 @@ mk64f12_flash_read(const struct hal_flash *dev, uint32_t address,
 }
 
 static int
-mk64f12_flash_write(const struct hal_flash *dev, uint32_t address,
+rv32m1_flash_write(const struct hal_flash *dev, uint32_t address,
         const void *src, uint32_t len)
 {
-    uint8_t padded[MK64F12_FLASH_ALIGN];
+    uint8_t padded[RV32M1_FLASH_ALIGN];
     uint8_t pad_len;
 
-    if (address % MK64F12_FLASH_ALIGN) {
+    if (address % RV32M1_FLASH_ALIGN) {
         /*
          * Unaligned write.
          */
         return -1;
     }
 
-    pad_len = len & (MK64F12_FLASH_ALIGN - 1);
+    pad_len = len & (RV32M1_FLASH_ALIGN - 1);
     if (pad_len) {
         /*
          * FLASH_Program also needs length to be aligned to 8 bytes.
@@ -98,14 +90,14 @@ mk64f12_flash_write(const struct hal_flash *dev, uint32_t address,
         memset(padded + pad_len, 0xff, sizeof(padded) - pad_len);
     }
     if (len) {
-        if (FLASH_Program(&mk64f12_config, address, (uint32_t *)src, len) !=
+        if (FLASH_Program(&rv32m1_config, address, (uint32_t *)src, len) !=
             kStatus_Success) {
             return -1;
         }
     }
     if (pad_len) {
-        if (FLASH_Program(&mk64f12_config, address + len, (uint32_t *)padded,
-                          MK64F12_FLASH_ALIGN) != kStatus_Success) {
+        if (FLASH_Program(&rv32m1_config, address + len, (uint32_t *)padded,
+                          RV32M1_FLASH_ALIGN) != kStatus_Success) {
             return -1;
         }
     }
@@ -113,15 +105,15 @@ mk64f12_flash_write(const struct hal_flash *dev, uint32_t address,
 }
 
 static int
-mk64f12_flash_erase_sector(const struct hal_flash *dev, uint32_t sector_address)
+rv32m1_flash_erase_sector(const struct hal_flash *dev, uint32_t sector_address)
 {
     int sr;
     int rc;
 
     OS_ENTER_CRITICAL(sr);
-    rc = FLASH_Erase(&mk64f12_config, sector_address,
-                     mk64f12_config.PFlashSectorSize,
-                     kFLASH_apiEraseKey);
+    rc = FLASH_Erase(&rv32m1_config, sector_address,
+                     rv32m1_config.PFlashSectorSize,
+                     kFLASH_ApiEraseKey);
     OS_EXIT_CRITICAL(sr);
     if (rc == kStatus_Success) {
         return 0;
@@ -130,23 +122,23 @@ mk64f12_flash_erase_sector(const struct hal_flash *dev, uint32_t sector_address)
 }
 
 static int
-mk64f12_flash_sector_info(const struct hal_flash *dev, int idx,
+rv32m1_flash_sector_info(const struct hal_flash *dev, int idx,
         uint32_t *addr, uint32_t *sz)
 {
-    *addr = mk64f12_config.PFlashBlockBase +
-            (idx * mk64f12_config.PFlashSectorSize);
-    *sz = mk64f12_config.PFlashSectorSize;
+    *addr = rv32m1_config.PFlashBlockBase +
+            (idx * rv32m1_config.PFlashSectorSize);
+    *sz = rv32m1_config.PFlashSectorSize;
     return 0;
 }
 
 static int
-mk64f12_flash_init(const struct hal_flash *dev)
+rv32m1_flash_init(const struct hal_flash *dev)
 {
-    if (FLASH_Init(&mk64f12_config) == kStatus_Success) {
-        mk64f12_flash_dev.hf_base_addr = mk64f12_config.PFlashBlockBase;
-        mk64f12_flash_dev.hf_size = mk64f12_config.PFlashTotalSize;
-        mk64f12_flash_dev.hf_sector_cnt =
-             (mk64f12_config.PFlashTotalSize / mk64f12_config.PFlashSectorSize);
+    if (FLASH_Init(&rv32m1_config) == kStatus_Success) {
+        rv32m1_flash_dev.hf_base_addr = rv32m1_config.PFlashBlockBase;
+        rv32m1_flash_dev.hf_size = rv32m1_config.PFlashTotalSize;
+        rv32m1_flash_dev.hf_sector_cnt =
+             (rv32m1_config.PFlashTotalSize / rv32m1_config.PFlashSectorSize);
     }
     return 0;
 }

@@ -22,26 +22,15 @@
 
 #include <hal/hal_bsp.h>
 
-#include "MK64F12.h"
-
-#ifndef min
-#define min(a, b) ((a)<(b)?(a):(b))
-#endif
-
-#define MK64F12_HW_ID_LEN     7
-
 int
 hal_bsp_hw_id_len(void)
 {
-    return MK64F12_HW_ID_LEN;
+    //TODO
+    return 0;
 }
 
-/*
- * TODO: Use serial# registers
- */
 int hal_bsp_hw_id(uint8_t *id, int max_len)
 {
-    memcpy(id, (void *)"ABCDEFG", MK64F12_HW_ID_LEN + 1);
-
-    return MK64F12_HW_ID_LEN;
+    //TODO
+    return 0;
 }
