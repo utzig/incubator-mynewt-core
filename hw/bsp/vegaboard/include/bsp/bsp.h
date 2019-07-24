@@ -27,10 +27,11 @@ extern "C" {
 #endif
 
 extern uint8_t __DATA_ROM;
-#define RAM_SIZE            0x40000
+#define RAM_SIZE        (0x30000 - 0x1800)   /* Total RAM - USB RAM */
 
-/* LED pins */
-#define LED_BLINK_PIN       MCU_GPIO_PORTA(23)
+/* RGB LED pins */
+#define LED_BLINK_PIN   MCU_GPIO_PORTA(22)   /* Blue */
+#define LED_2           MCU_GPIO_PORTA(24)   /* Red */
 
 #ifdef __cplusplus
 }

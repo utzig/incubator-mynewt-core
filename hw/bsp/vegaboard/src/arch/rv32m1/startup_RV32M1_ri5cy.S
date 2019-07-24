@@ -76,6 +76,9 @@
     jal x0, LSU_Handler
 
     .section .startup
+    .globl   Reset_Handler
+    .weak    Reset_Handler
+    .type    Reset_Handler, %function
 
 /* Reset Handler */
 Reset_Handler:
@@ -93,21 +96,34 @@ Reset_Handler:
     jal SystemInit
 #endif
 
-    call __libc_init_array
+    /* Init heap */
+    la a0, __heap_start
+    la a1, __heap_end
+    call _sbrkInit
+
+    /* Call global constructors */
+    #la a0, __libc_fini_array
+    #call atexit
+    #call __libc_init_array
 
     # Enable global interrupt. */
     csrsi mstatus, 8
 
-    #FIXME
-    #jal main
-    jal _start
+    call _start
+    call _fini
     ebreak
 
     .size Reset_Handler, . - Reset_Handler
 
-    .global _init
-    .global _fini
+    .globl _init
+    .weak  _init
+    .type  _init, %function
 _init:
+    ret
+
+    .globl _fini
+    .weak  _fini
+    .type  _fini, %function
 _fini:
     ret
 
@@ -215,11 +231,11 @@ IllegalInstruction_HandlerFunc:
     j .
     .size IllegalInstruction_HandlerFunc, . - IllegalInstruction_HandlerFunc
 
-    .weak Ecall_HandlerFunc
-    .type Ecall_HandlerFunc, %function
-Ecall_HandlerFunc:
-    j .
-    .size Ecall_HandlerFunc, . - Ecall_HandlerFunc
+#    .weak Ecall_HandlerFunc
+#    .type Ecall_HandlerFunc, %function
+#Ecall_HandlerFunc:
+#    j .
+#    .size Ecall_HandlerFunc, . - Ecall_HandlerFunc
 
     .weak LSU_HandlerFunc
     .type LSU_HandlerFunc, %function

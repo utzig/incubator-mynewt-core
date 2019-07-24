@@ -48,6 +48,7 @@
 #include <stdint.h>
 #include "fsl_device_registers.h"
 #include "fsl_common.h"
+#include <bsp/bsp.h>
 
 typedef void (*irq_handler_t)(void);
 
@@ -195,6 +196,7 @@ DEFINE_DEFAULT_IRQ_HANDLER(MUA_IRQHandler);
 DEFINE_DEFAULT_IRQ_HANDLER(SPM_IRQHandler);
 DEFINE_DEFAULT_IRQ_HANDLER(WDOG0_IRQHandler);
 DEFINE_DEFAULT_IRQ_HANDLER(SCG_IRQHandler);
+DEFINE_DEFAULT_IRQ_HANDLER(LPIT0_DriverIRQHandler);
 DEFINE_DEFAULT_IRQ_HANDLER(LPIT0_IRQHandler);
 DEFINE_DEFAULT_IRQ_HANDLER(RTC_IRQHandler);
 DEFINE_DEFAULT_IRQ_HANDLER(LPTMR0_IRQHandler);
@@ -473,8 +475,12 @@ void SystemSetupSystick(uint32_t tickRateHz, uint32_t intPriority)
     /* Setup timer operation in debug and doze modes and enable the module */
     SYSTICK_LPIT->MCR = LPIT_MCR_DBG_EN_MASK | LPIT_MCR_DOZE_EN_MASK | LPIT_MCR_M_CEN_MASK;
 
+    hal_gpio_init_out(LED_BLINK_PIN, 1);
+
     /* Set timer period for channel 0 */
     SYSTICK_LPIT->CHANNEL[SYSTICK_LPIT_CH].TVAL = (CLOCK_GetIpFreq(kCLOCK_Lpit0) / tickRateHz) - 1;
+
+    hal_gpio_write(LED_BLINK_PIN, 0);
 
     /* Enable timer interrupts for channel 0 */
     SYSTICK_LPIT->MIER |= (1U << SYSTICK_LPIT_CH);

@@ -26,8 +26,11 @@
 /* Entry Point */
 OUTPUT_ARCH( "riscv" )
 
-HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x0400;
+HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x0800;
 STACK_SIZE = DEFINED(__stack_size__) ? __stack_size__ : 0x0800;
+
+/* FIXME */
+ENTRY(Reset_Handler)
 
 /* Specify the memory areas */
 MEMORY
@@ -64,6 +67,8 @@ SECTIONS
   */
 
   /* The program code and other data goes into internal flash */
+  __text = .;
+
   .text :
   {
     . = ALIGN(4);
@@ -108,6 +113,7 @@ SECTIONS
 
   __etext = .;    /* define a global symbol at end of code */
   __global_pointer = .;    /* define a global symbol at end of code */
+  __global_pointer$ = .;    /* define a global symbol at end of code */
   __DATA_ROM = .; /* Symbol is used by startup for data initialization */
 
   .data : AT(__DATA_ROM)
@@ -133,6 +139,8 @@ SECTIONS
 
   _edata = .;
   /* Uninitialized data section */
+  PROVIDE( _fbss = . );
+  PROVIDE( __bss_start = . );
   .bss :
   {
     /* This is used by the startup in order to initialize the .bss section */
