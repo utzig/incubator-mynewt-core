@@ -149,7 +149,7 @@ void SystemClearSystickFlag (void);
  */
 bool SystemInISR(void);
 
-#define SysTick_Handler LPIT0_IRQHandler
+#define SysTick_Handler LPIT0_DriverIRQHandler
 
 /**
  * @brief Set interrupt priority in Event unit.
