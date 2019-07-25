@@ -60,7 +60,7 @@ hal_bsp_flash_dev(uint8_t id)
     if (id == 0) {
         //FIXME
         //return &rv32m1_flash_dev;
-        assert(0);
+        //assert(0);
     }
     return NULL;
 }
