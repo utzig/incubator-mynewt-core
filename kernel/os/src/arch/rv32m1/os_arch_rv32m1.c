@@ -86,8 +86,8 @@ timer_handler(void)
 
 void SysTick_Handler(void)
 {
-    SystemClearSystickFlag();
     timer_handler();
+    SystemClearSystickFlag();
 }
 
 void
@@ -97,7 +97,7 @@ os_arch_ctx_sw(struct os_task *t)
         os_sched_ctx_sw_hook(t);
     }
 
-    __ASM volatile ("ecall");
+    __asm__ volatile ("ecall");
 }
 
 os_sr_t
@@ -107,13 +107,13 @@ os_arch_save_sr(void)
 
     asm volatile ("csrrci %0, mstatus, 8" : "=r"(mstatus));
 
-    return mstatus & 8;
+    return (mstatus & 8);
 }
 
 void
 os_arch_restore_sr(os_sr_t isr_ctx)
 {
-    if (isr_ctx) {
+    if (!isr_ctx) {
         asm("csrsi mstatus, 8");
     }
 }
@@ -123,7 +123,7 @@ os_arch_in_critical(void)
 {
     uint32_t mstatus;
 
-    asm volatile ("csrrci %0, mstatus, 8" : "=r"(mstatus));
+    asm volatile ("csrr %0, mstatus" : "=r"(mstatus));
 
     return !(mstatus & 8);
 }
@@ -164,16 +164,6 @@ os_arch_os_init(void)
     os_error_t err = OS_OK;
     int i;
 
-#if 0
-    /* Set all external interrupts to default handler */
-    //FIXME
-    for (i = 0; i < NUMBER_OF_INT_VECTORS; ++i) {
-        //plic_interrupts[i] = nvic_default_isr;
-        /* Default priority set to 0, never interrupt */
-        //PLIC_REG(PLIC_PRIORITY_OFFSET + i * 4) = 0;
-    }
-#endif
-
     /* Disable all interrupts */
     for (i = 0; i < NUMBER_OF_INT_VECTORS; i++) {
         (void)DisableIRQ(i);
@@ -199,34 +189,20 @@ os_arch_start(void)
 
     /* Get the highest priority ready to run to set the current task */
     t = os_sched_next_task();
-    os_sched_set_current_task(t);
 
-    /* Clean software interrupt, and enable it */
-    //CLINT_REG(CLINT_MSIP) = 0;
-    //set_csr(mie, MIP_MSIP);
-    /* Enable external interrupts */
-    //set_csr(mie, MIP_MEIP);
-
-    /* Intitialize and start system clock timer, this enable timer interrupt */
+    /* Initialize and start system clock timer, this enable timer interrupt */
     os_tick_init(OS_TICKS_PER_SEC, OS_TICK_PRIO);
 
     /* Mark the OS as started, right before we run our first task */
     g_os_started = 1;
 
-    /* Perform context switch */
-    os_arch_ctx_sw(t);
-
-    /*
-     * First time setup fake os_task struct that only has one pointer for SP
-     * Having that will make context switch function work same for first
-     * and every other time.
-     * This fake SP will be used during initial context switch to store SP
-     * that will never be used.
-     */
     os_sched_set_current_task(&fake_task);
 
     /* Enable interrupts */
     asm("csrsi mstatus, 8");
+
+    /* Perform context switch */
+    os_arch_ctx_sw(t);
 
     /* This should not be reached */
     return (uint32_t) (t->t_arg);

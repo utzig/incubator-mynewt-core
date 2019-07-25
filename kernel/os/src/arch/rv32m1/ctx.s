@@ -59,9 +59,9 @@
 //#undef CONTEXT_SWITCH_ON_ECALL
 #define CONTEXT_SWITCH_ON_ECALL 1
 
-    .type Ecall_HandlerFunc, %function
-    .globl Ecall_HandlerFunc
-Ecall_HandlerFunc:
+    .type Ecall_Handler, %function
+    .globl Ecall_Handler
+Ecall_Handler:
     addi sp, sp, -caller_saved_size
     sw ra, ra_offset(sp)
     sw gp, gp_offset(sp)
@@ -82,6 +82,8 @@ Ecall_HandlerFunc:
     sw a6, a6_offset(sp)
     sw a7, a7_offset(sp)
 
+check_ctx_sw:   /* label for debug purposes */
+
     /* Do context switch only if highest priority task changed */
     lw t2, g_os_run_list     /* Get highest priority task ready to run */
     la t1, g_current_task    /* Get current task address */
@@ -91,7 +93,10 @@ Ecall_HandlerFunc:
     /* Task needs to be changed, save calle responsible registers */
     call save_callee_responsible_registers
 
+do_ctx_sw:  /* label for debug purposes */
+
 #if CONTEXT_SWITCH_ON_ECALL
+    csrr a1, mepc
     addi a1, a1, 4                /* Get address of instruction after ECALL */
 #endif
     sw a1, mepc_offset(sp)
@@ -112,20 +117,30 @@ Ecall_HandlerFunc:
     csrw mepc, a0             /* Set return address to what handle_trap returned */
     /* lw gp, gp_offset(sp) */
     /* lw tp, tp_offset(sp) */
+    lw t0, t0_offset(sp)
+    lw t1, t1_offset(sp)
+    lw t2, t2_offset(sp)
     lw t3, t3_offset(sp)
     lw t4, t4_offset(sp)
     lw t5, t5_offset(sp)
     lw t6, t6_offset(sp)
+    lw a0, a0_offset(sp)
+    lw a1, a1_offset(sp)
     lw a2, a2_offset(sp)
     lw a3, a3_offset(sp)
     lw a4, a4_offset(sp)
     lw a5, a5_offset(sp)
     lw a6, a6_offset(sp)
     lw a7, a7_offset(sp)
+    lw ra, ra_offset(sp)
+    addi sp, sp, caller_saved_size
+    mret
+
     /*
      * In case of context switch that did not found new task to run only
      * few registers were actually touched.
      */
+
 fast_finish_context_switch:
     lw ra, ra_offset(sp)
     lw a0, a0_offset(sp)
@@ -134,6 +149,9 @@ fast_finish_context_switch:
     lw t1, t1_offset(sp)
     lw t2, t2_offset(sp)
     addi sp, sp, caller_saved_size
+    csrr t6, mepc
+    addi t6, t6, 4
+    csrw mepc, t6
     mret
 
 save_callee_responsible_registers:
