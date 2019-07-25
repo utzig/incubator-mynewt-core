@@ -106,9 +106,6 @@ Reset_Handler:
     #call atexit
     #call __libc_init_array
 
-    # Enable global interrupt. */
-    csrsi mstatus, 8
-
     call _start
     call _fini
     ebreak
@@ -222,7 +219,7 @@ IRQ_Handler:
     .endm
 
 define_exception_entry IllegalInstruction_Handler IllegalInstruction_HandlerFunc
-define_exception_entry Ecall_Handler Ecall_HandlerFunc
+//define_exception_entry Ecall_Handler Ecall_HandlerFunc
 define_exception_entry LSU_Handler LSU_HandlerFunc
 
     .weak IllegalInstruction_HandlerFunc
