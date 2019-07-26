@@ -26,13 +26,11 @@
 #include "hal/hal_system.h"
 #include "bsp/bsp.h"
 
-//#include "mcu/frdm-k64f_hal.h"
-//#include "MK64F12.h"
 #include "fsl_port.h"
 #include "fsl_lpuart.h"
 #include "fsl_debug_console.h"
 
-//#include "hal_uart_nxp.h"
+#include "hal_uart_nxp.h"
 
 /*! @brief Ring buffer size (Unit: Byte). */
 #define TX_BUF_SZ  32
@@ -47,58 +45,44 @@ struct uart_ring {
 };
 
 struct hal_uart {
-    LPUART_Type       *u_base;
-    clock_name_t     clk_src;
-    uint32_t         u_irq;
-    PORT_Type       *p_base;
-    clock_ip_name_t  p_clock;
-    int  u_pin_rx;
-    int  u_pin_tx;
+    LPUART_Type      *u_base;
+    clock_name_t      clk_src;
+    uint32_t          u_irq;
+    PORT_Type        *p_base;
+    clock_ip_name_t   p_clock;
+    int               u_pin_rx;
+    int               u_pin_tx;
     /* TODO: support flow control pins */
-    hal_uart_rx_char u_rx_func;
-    hal_uart_tx_char u_tx_func;
-    hal_uart_tx_done u_tx_done;
-    void *u_func_arg;
-    uint8_t u_configured:1;
-    uint8_t u_open:1;
-    uint8_t u_tx_started:1;
-    uint8_t u_rx_stall:1;
-    struct uart_ring ur_tx;
-    uint8_t tx_buffer[TX_BUF_SZ];
-    struct uart_ring ur_rx;
-    uint8_t rx_buffer[RX_BUF_SZ];
+    hal_uart_rx_char  u_rx_func;
+    hal_uart_tx_char  u_tx_func;
+    hal_uart_tx_done  u_tx_done;
+    void             *u_func_arg;
+    uint8_t           u_configured:1;
+    uint8_t           u_open:1;
+    uint8_t           u_tx_started:1;
+    uint8_t           u_rx_stall:1;
+    struct            uart_ring ur_tx;
+    uint8_t           tx_buffer[TX_BUF_SZ];
+    struct            uart_ring ur_rx;
+    uint8_t           rx_buffer[RX_BUF_SZ];
 };
 
 /* UART configurations */
-#if 0
-static struct hal_uart uarts[FSL_FEATURE_SOC_UART_COUNT];
+static struct hal_uart uarts[4];
 
-static uint8_t const s_uartExists[] = NXP_UART_EXISTS;
 static uint8_t const s_uartEnabled[] = NXP_UART_ENABLED;
-static LPUART_Type *const s_uartBases[] = UART_BASE_PTRS;
+static LPUART_Type *const s_uartBases[] = LPUART_BASE_PTRS;
 static clock_name_t s_uartClocks[] = NXP_UART_CLOCKS;
-static uint8_t const s_uartIRQ[] = UART_RX_TX_IRQS;
+static uint8_t const s_uartIRQ[] = LPUART_RX_TX_IRQS;
 static PORT_Type *const s_uartPort[] = NXP_UART_PORTS;
 static clock_ip_name_t const s_uartPortClocks[] = NXP_UART_PORT_CLOCKS;
 static uint8_t const s_uartPIN_RX[] = NXP_UART_PIN_RX;
 static uint8_t const s_uartPIN_TX[] = NXP_UART_PIN_TX;
 
-static void uart_irq0(void);
-static void uart_irq1(void);
-static void uart_irq2(void);
-static void uart_irq3(void);
-static void uart_irq4(void);
-static void uart_irq5(void);
-static void (*s_uartirqs[])(void) = {
-    uart_irq0, uart_irq1, uart_irq2, uart_irq3, uart_irq4, uart_irq5
-};
-#endif
-
 /*
  * RING BUFFER FUNCTIONS
  */
 
-#if 0
 static uint8_t ur_is_empty(struct uart_ring *ur)
 {
     return (ur->ur_head == ur->ur_tail);
@@ -121,8 +105,6 @@ static void ur_bump(struct uart_ring *ur)
 static uint8_t ur_read(struct uart_ring *ur)
 {
     return ur->ur_buf[ur->ur_head];
-    //FIXME
-    return 0;
 }
 
 static int ur_queue(struct uart_ring *ur, uint8_t data)
@@ -135,7 +117,6 @@ static int ur_queue(struct uart_ring *ur, uint8_t data)
     }
     return -1;
 }
-#endif
 
 /*
  * END RING BUFFER FUNCTIONS
@@ -144,10 +125,9 @@ static int ur_queue(struct uart_ring *ur, uint8_t data)
 int hal_uart_init_cbs(int port, hal_uart_tx_char tx_func,
   hal_uart_tx_done tx_done, hal_uart_rx_char rx_func, void *arg)
 {
-#if 0
     struct hal_uart *u;
 
-    if (port >= FSL_FEATURE_SOC_UART_COUNT) {
+    if (port > 3) {
         return -1;
     }
     u = &uarts[port];
@@ -155,17 +135,15 @@ int hal_uart_init_cbs(int port, hal_uart_tx_char tx_func,
     u->u_tx_func = tx_func;
     u->u_tx_done = tx_done;
     u->u_func_arg = arg;
-#endif
 
     return 0;
 }
 
 void hal_uart_blocking_tx(int port, uint8_t byte)
 {
-#if 0
     struct hal_uart *u;
 
-    if (port >= FSL_FEATURE_SOC_UART_COUNT) {
+    if (port > 3) {
         return;
     }
     u = &uarts[port];
@@ -174,13 +152,11 @@ void hal_uart_blocking_tx(int port, uint8_t byte)
     }
 
     LPUART_WriteBlocking(u->u_base, &byte, 1);
-#endif
 }
 
 static int
 hal_uart_tx_fill_buf(struct hal_uart *u)
 {
-#if 0
     int data = 0;
     int i = 0;
     os_sr_t sr;
@@ -198,19 +174,15 @@ hal_uart_tx_fill_buf(struct hal_uart *u)
     }
     OS_EXIT_CRITICAL(sr);
     return i;
-#endif
-    //FIXME
-    return 0;
 }
 
 void hal_uart_start_tx(int port)
 {
-#if 0
     struct hal_uart *u;
     int data = -1;
     int rc;
 
-    if (port >= FSL_FEATURE_SOC_UART_COUNT) {
+    if (port > 3) {
         return;
     }
     u = &uarts[port];
@@ -218,9 +190,7 @@ void hal_uart_start_tx(int port)
         return;
     }
 
-    /* main loop */
-    while (true)
-    {
+    while (true) {
         /* add data to TX ring buffer */
         if (u->u_tx_started == 0) {
             rc = hal_uart_tx_fill_buf(u);
@@ -231,7 +201,7 @@ void hal_uart_start_tx(int port)
 
         /* Send data only when UART TX register is empty and TX ring buffer has data to send out. */
         while (!ur_is_empty(&u->ur_tx) &&
-               (kUART_TxDataRegEmptyFlag & LPUART_GetStatusFlags(u->u_base))) {
+               (kLPUART_TxDataRegEmptyFlag & LPUART_GetStatusFlags(u->u_base))) {
             data = ur_read(&u->ur_tx);
             LPUART_WriteByte(u->u_base, data);
             ur_bump(&u->ur_tx);
@@ -245,18 +215,16 @@ void hal_uart_start_tx(int port)
             break;
         }
     }
-#endif
 }
 
 void
 hal_uart_start_rx(int port)
 {
-#if 0
     struct hal_uart *u;
     os_sr_t sr;
     int rc = 0;
 
-    if (port >= FSL_FEATURE_SOC_UART_COUNT) {
+    if (port > 3) {
         return;
     }
     u = &uarts[port];
@@ -278,7 +246,6 @@ hal_uart_start_rx(int port)
         }
         OS_EXIT_CRITICAL(sr);
     }
-#endif
 }
 
 static void
@@ -288,13 +255,11 @@ uart_irq_handler(int port)
     uint32_t status;
     uint8_t data;
 
-#if 0
-
     u = &uarts[port];
     if (u->u_configured && u->u_open) {
         status = LPUART_GetStatusFlags(u->u_base);
         /* Check for RX data */
-        if (status & (kUART_RxDataRegFullFlag | kUART_RxOverrunFlag)) {
+        if (status & (kLPUART_RxDataRegFullFlag | kLPUART_RxOverrunFlag)) {
             data = LPUART_ReadByte(u->u_base);
             if (u->u_rx_stall || u->u_rx_func(u->u_func_arg, data) < 0) {
                 /*
@@ -305,7 +270,7 @@ uart_irq_handler(int port)
             }
         }
         /* Check for TX complete */
-        if (kUART_TxDataRegEmptyFlag & LPUART_GetStatusFlags(u->u_base)) {
+        if (kLPUART_TxDataRegEmptyFlag & LPUART_GetStatusFlags(u->u_base)) {
             if (u->u_tx_started) {
                 u->u_tx_started = 0;
                 if (u->u_tx_done)
@@ -313,44 +278,31 @@ uart_irq_handler(int port)
             }
         }
     }
-#endif
 }
 
-#if 0
-static void
-uart_irq0(void)
+void
+LPUART0_DriverIRQHandler(void)
 {
     uart_irq_handler(0);
 }
 
-static void
-uart_irq1(void)
+#if 0
+void
+LPUART1_DriverIRQHandler(void)
 {
     uart_irq_handler(1);
 }
 
-static void
-uart_irq2(void)
+void
+LPUART2_DriverIRQHandler(void)
 {
     uart_irq_handler(2);
 }
 
-static void
-uart_irq3(void)
+void
+LPUART3_DriverIRQHandler(void)
 {
     uart_irq_handler(3);
-}
-
-static void
-uart_irq4(void)
-{
-    uart_irq_handler(4);
-}
-
-static void
-uart_irq5(void)
-{
-    uart_irq_handler(5);
 }
 #endif
 
@@ -358,22 +310,25 @@ int
 hal_uart_config(int port, int32_t speed, uint8_t databits, uint8_t stopbits,
                 enum hal_uart_parity parity, enum hal_uart_flow_ctl flow_ctl)
 {
-#if 0
     struct hal_uart *u;
-    uart_config_t uconfig;
+    lpuart_config_t uconfig;
 
-    if (port >= FSL_FEATURE_SOC_UART_COUNT) {
+    if (port > 3) {
         return -1;
     }
+
     u = &uarts[port];
     if (!u->u_configured || u->u_open) {
         return -1;
     }
 
-    /* PIN config (all UARTs use kPORT_MuxAlt3) */
+    /* PIN config (all LPUARTs use kPORT_MuxAlt3) */
     CLOCK_EnableClock(u->p_clock);
     PORT_SetPinMux(u->p_base, u->u_pin_rx, kPORT_MuxAlt3);
     PORT_SetPinMux(u->p_base, u->u_pin_tx, kPORT_MuxAlt3);
+
+    /* Enable LPUART clock */
+    CLOCK_SetIpSrc(u->clk_src, kCLOCK_IpSrcFircAsync);
 
     /* UART CONFIG */
     LPUART_GetDefaultConfig(&uconfig);
@@ -383,10 +338,10 @@ hal_uart_config(int port, int32_t speed, uint8_t databits, uint8_t stopbits,
 
     switch (stopbits) {
     case 1:
-        uconfig.stopBitCount = kUART_OneStopBit;
+        uconfig.stopBitCount = kLPUART_OneStopBit;
         break;
     case 2:
-        uconfig.stopBitCount = kUART_TwoStopBit;
+        uconfig.stopBitCount = kLPUART_TwoStopBit;
         break;
     default:
         return -1;
@@ -394,13 +349,13 @@ hal_uart_config(int port, int32_t speed, uint8_t databits, uint8_t stopbits,
 
     switch (parity) {
     case HAL_UART_PARITY_NONE:
-        uconfig.parityMode = kUART_ParityDisabled;
+        uconfig.parityMode = kLPUART_ParityDisabled;
         break;
     case HAL_UART_PARITY_ODD:
-        uconfig.parityMode = kUART_ParityOdd;
+        uconfig.parityMode = kLPUART_ParityOdd;
         break;
     case HAL_UART_PARITY_EVEN:
-        uconfig.parityMode = kUART_ParityEven;
+        uconfig.parityMode = kLPUART_ParityEven;
         break;
     }
 
@@ -410,71 +365,70 @@ hal_uart_config(int port, int32_t speed, uint8_t databits, uint8_t stopbits,
     u->u_open = 1;
     u->u_tx_started = 0;
 
-    NVIC_SetVector(u->u_irq, (uint32_t)s_uartirqs[port]);
-
     /* Initialize UART device */
-    LPUART_Init(u->u_base, &uconfig, CLOCK_GetFreq(u->clk_src));
+    LPUART_Init(u->u_base, &uconfig, CLOCK_GetIpFreq(u->clk_src));
     LPUART_EnableTx(u->u_base, true);
     LPUART_EnableRx(u->u_base, true);
+
     LPUART_EnableInterrupts(u->u_base,
-                            kUART_RxDataRegFullInterruptEnable |
-                            kUART_RxOverrunInterruptEnable);
+                            kLPUART_RxDataRegFullInterruptEnable |
+                            kLPUART_RxOverrunInterruptEnable);
     EnableIRQ(u->u_irq);
-#endif
 
     return 0;
 }
 
 int hal_uart_close(int port)
 {
-#if 0
     struct hal_uart *u;
 
-    if (port >= FSL_FEATURE_SOC_UART_COUNT) {
+    if (port > 3) {
         return -1;
     }
+
     u = &uarts[port];
     if (!u->u_open) {
         return -1;
     }
 
     u->u_open = 0;
-    LPUART_DisableInterrupts(u->u_base, kUART_RxDataRegFullInterruptEnable | kUART_RxOverrunInterruptEnable | kUART_TxDataRegEmptyInterruptEnable);
+    LPUART_DisableInterrupts(u->u_base,
+            kLPUART_RxDataRegFullInterruptEnable |
+            kLPUART_RxOverrunInterruptEnable |
+            kLPUART_TxDataRegEmptyInterruptEnable);
     DisableIRQ(u->u_irq);
     LPUART_EnableTx(u->u_base, false);
     LPUART_EnableRx(u->u_base, false);
-#endif
 
     return 0;
 }
 
 int hal_uart_init(int port, void *cfg)
 {
-#if 0
-    if (s_uartExists[port]) {
-        if (s_uartEnabled[port]) {
-            uarts[port].u_base        = s_uartBases[port];
-            uarts[port].clk_src       = s_uartClocks[port];
-            uarts[port].u_irq         = s_uartIRQ[port];
-            uarts[port].p_base        = s_uartPort[port];
-            uarts[port].p_clock       = s_uartPortClocks[port];
-            uarts[port].u_pin_rx      = s_uartPIN_RX[port];
-            uarts[port].u_pin_tx      = s_uartPIN_TX[port];
-            uarts[port].ur_tx.ur_buf  = uarts[port].tx_buffer;
-            uarts[port].ur_tx.ur_size = TX_BUF_SZ;
-            uarts[port].ur_tx.ur_head = 0;
-            uarts[port].ur_tx.ur_tail = 0;
-            uarts[port].ur_rx.ur_buf  = uarts[port].rx_buffer;
-            uarts[port].ur_rx.ur_size = RX_BUF_SZ;
-            uarts[port].ur_rx.ur_head = 0;
-            uarts[port].ur_rx.ur_tail = 0;
-            uarts[port].u_configured  = 1;
-        }
-        else {
-            uarts[port].u_configured = 0;
-        }
+    if (port > 3) {
+        return -1;
     }
-#endif
+
+    if (s_uartEnabled[port]) {
+        uarts[port].u_base        = s_uartBases[port];
+        uarts[port].clk_src       = s_uartClocks[port];
+        uarts[port].u_irq         = s_uartIRQ[port];
+        uarts[port].p_base        = s_uartPort[port];
+        uarts[port].p_clock       = s_uartPortClocks[port];
+        uarts[port].u_pin_rx      = s_uartPIN_RX[port];
+        uarts[port].u_pin_tx      = s_uartPIN_TX[port];
+        uarts[port].ur_tx.ur_buf  = uarts[port].tx_buffer;
+        uarts[port].ur_tx.ur_size = TX_BUF_SZ;
+        uarts[port].ur_tx.ur_head = 0;
+        uarts[port].ur_tx.ur_tail = 0;
+        uarts[port].ur_rx.ur_buf  = uarts[port].rx_buffer;
+        uarts[port].ur_rx.ur_size = RX_BUF_SZ;
+        uarts[port].ur_rx.ur_head = 0;
+        uarts[port].ur_rx.ur_tail = 0;
+        uarts[port].u_configured  = 1;
+    } else {
+        uarts[port].u_configured = 0;
+    }
 
     return 0;
 }

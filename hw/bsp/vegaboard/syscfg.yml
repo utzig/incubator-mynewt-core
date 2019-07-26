@@ -25,19 +25,67 @@ syscfg.defs:
     # UART0 PINS on CMSIS-DAP Interface
     UART_0:
         description: 'Whether to enable UART0'
-        value:  1
+        value: 1
     UART_0_PORT:
         description: 'GPIO port for UART0 pins'
-        value:  PORTB
+        value: PORTC
     UART_0_PORT_CLOCK:
         description: 'Clock to enable for UART0 pins'
-        value:  kCLOCK_PortB
+        value: kCLOCK_PortC
     UART_0_PIN_TX:
         description: 'TX pin for UART0'
-        value:  16
+        value: 8
     UART_0_PIN_RX:
         description: 'RX pin for UART0'
-        value:  17
+        value: 7
+
+    UART_1:
+        description: 'Whether to enable UART1'
+        value: 0
+    UART_1_PORT:
+        description: 'GPIO port for UART1 pins'
+        value: -1
+    UART_1_PORT_CLOCK:
+        description: 'Clock to enable for UART1 pins'
+        value: -1
+    UART_1_PIN_TX:
+        description: 'TX pin for UART1'
+        value: -1
+    UART_1_PIN_RX:
+        description: 'RX pin for UART1'
+        value: -1
+
+    UART_2:
+        description: 'Whether to enable UART2'
+        value: 0
+    UART_2_PORT:
+        description: 'GPIO port for UART2 pins'
+        value: -1
+    UART_2_PORT_CLOCK:
+        description: 'Clock to enable for UART2 pins'
+        value: -1
+    UART_2_PIN_TX:
+        description: 'TX pin for UART2'
+        value: -1
+    UART_2_PIN_RX:
+        description: 'RX pin for UART2'
+        value: -1
+
+    UART_3:
+        description: 'Whether to enable UART3'
+        value: 0
+    UART_3_PORT:
+        description: 'GPIO port for UART3 pins'
+        value: -1
+    UART_3_PORT_CLOCK:
+        description: 'Clock to enable for UART3 pins'
+        value: -1
+    UART_3_PIN_TX:
+        description: 'TX pin for UART3'
+        value: -1
+    UART_3_PIN_RX:
+        description: 'RX pin for UART3'
+        value: -1
 
 syscfg.vals:
     CONFIG_FCB_FLASH_AREA: FLASH_AREA_NFFS
