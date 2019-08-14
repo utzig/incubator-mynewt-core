@@ -26,8 +26,6 @@
  extern "C" {
 #endif
 
-#define NXP_UART_EXISTS      { 1, 1, 1, 1 }
-
 #define NXP_UART_ENABLED     { MYNEWT_VAL(UART_0), \
                                MYNEWT_VAL(UART_1), \
                                MYNEWT_VAL(UART_2), \

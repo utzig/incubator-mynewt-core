@@ -33,8 +33,10 @@
 #include "hal_uart_nxp.h"
 
 /*! @brief Ring buffer size (Unit: Byte). */
-#define TX_BUF_SZ  32
-#define RX_BUF_SZ  128
+#define TX_BUF_SZ  8
+#define RX_BUF_SZ  16
+
+#define TOTAL_UARTS 4
 
 struct uart_ring {
     uint16_t ur_head;
@@ -98,7 +100,6 @@ static void ur_bump(struct uart_ring *ur)
     if (!ur_is_empty(ur)) {
         ur->ur_head++;
         ur->ur_head %= ur->ur_size;
-        return;
     }
 }
 
@@ -122,12 +123,14 @@ static int ur_queue(struct uart_ring *ur, uint8_t data)
  * END RING BUFFER FUNCTIONS
  */
 
+#define IS_VALID_PORT(x) ((x) < 4)
+
 int hal_uart_init_cbs(int port, hal_uart_tx_char tx_func,
   hal_uart_tx_done tx_done, hal_uart_rx_char rx_func, void *arg)
 {
     struct hal_uart *u;
 
-    if (port > 3) {
+    if (!IS_VALID_PORT(port)) {
         return -1;
     }
     u = &uarts[port];
@@ -143,7 +146,7 @@ void hal_uart_blocking_tx(int port, uint8_t byte)
 {
     struct hal_uart *u;
 
-    if (port > 3) {
+    if (!IS_VALID_PORT(port)) {
         return;
     }
     u = &uarts[port];
@@ -182,9 +185,10 @@ void hal_uart_start_tx(int port)
     int data = -1;
     int rc;
 
-    if (port > 3) {
+    if (!IS_VALID_PORT(port)) {
         return;
     }
+
     u = &uarts[port];
     if (!u->u_configured || !u->u_open) {
         return;
@@ -224,9 +228,10 @@ hal_uart_start_rx(int port)
     os_sr_t sr;
     int rc = 0;
 
-    if (port > 3) {
+    if (!IS_VALID_PORT(port)) {
         return;
     }
+
     u = &uarts[port];
     if (!u->u_configured || !u->u_open) {
         return;
@@ -235,7 +240,8 @@ hal_uart_start_rx(int port)
     u->u_rx_stall = 0;
 
     /* Send back what's in the RX ring buffer until it's empty or we get an
-     * error */
+     * error
+     */
     while ((rc >= 0) && !ur_is_empty(&u->ur_rx)) {
         OS_ENTER_CRITICAL(sr);
         rc = u->u_rx_func(u->u_func_arg, ur_read(&u->ur_rx));
@@ -405,7 +411,7 @@ int hal_uart_close(int port)
 
 int hal_uart_init(int port, void *cfg)
 {
-    if (port > 3) {
+    if (port >= TOTAL_UARTS) {
         return -1;
     }
 

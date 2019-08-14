@@ -72,12 +72,6 @@ extern struct os_task g_idle_task;
 
 #define OS_TICK_PRIO 0
 
-static int
-os_in_isr(void)
-{
-    return (int)SystemInISR();
-}
-
 void
 timer_handler(void)
 {
@@ -86,8 +80,8 @@ timer_handler(void)
 
 void SysTick_Handler(void)
 {
-    timer_handler();
     SystemClearSystickFlag();
+    timer_handler();
 }
 
 void
@@ -97,6 +91,7 @@ os_arch_ctx_sw(struct os_task *t)
         os_sched_ctx_sw_hook(t);
     }
 
+    //FIXME
     __asm__ volatile ("ecall");
 }
 
@@ -113,8 +108,8 @@ os_arch_save_sr(void)
 void
 os_arch_restore_sr(os_sr_t isr_ctx)
 {
-    if (!isr_ctx) {
-        asm("csrsi mstatus, 8");
+    if (isr_ctx) {
+        __enable_irq();
     }
 }
 
@@ -169,13 +164,6 @@ os_arch_os_init(void)
         (void)DisableIRQ(i);
     }
 
-    /* Enable interrupts at 0 level */
-    //PLIC_REG(PLIC_THRESHOLD_OFFSET) = 0;
-
-    /* Set main trap handler */
-    //FIXME write_csr(mtvec, &trap_entry);
-    //__ASM volatile("csrw 0x305, %0" :: "r"((uint32_t)&trap_entry));
-
     os_arch_init();
 
     return err;
@@ -198,8 +186,7 @@ os_arch_start(void)
 
     os_sched_set_current_task(&fake_task);
 
-    /* Enable interrupts */
-    asm("csrsi mstatus, 8");
+    __enable_irq();
 
     /* Perform context switch */
     os_arch_ctx_sw(t);
@@ -211,19 +198,11 @@ os_arch_start(void)
 os_error_t
 os_arch_os_start(void)
 {
-    os_error_t err;
-
-    err = OS_ERR_IN_ISR;
-    if (os_in_isr() == 0) {
-        err = OS_OK;
+    if (!SystemInISR()) {
         /* should be in kernel mode here */
         os_arch_start();
+        return OS_OK;
     }
 
-    return err;
-}
-
-void
-software_interrupt_handler(uintptr_t mcause)
-{
+    return OS_ERR_IN_ISR;
 }

@@ -26,7 +26,6 @@
 /* Entry Point */
 OUTPUT_ARCH( "riscv" )
 
-HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x0800;
 STACK_SIZE = DEFINED(__stack_size__) ? __stack_size__ : 0x0800;
 
 /* FIXME */
@@ -116,7 +115,8 @@ SECTIONS
   __global_pointer$ = .;    /* define a global symbol at end of code */
   __DATA_ROM = .; /* Symbol is used by startup for data initialization */
 
-  .data : AT(__DATA_ROM)
+  /* FIXME: .data : AT(__DATA_ROM)*/
+  .data :
   {
     . = ALIGN(4);
     __DATA_RAM = .;
@@ -131,7 +131,7 @@ SECTIONS
     KEEP(*(.jcr*))
     . = ALIGN(4);
     __data_end__ = .;        /* define a global symbol at data end */
-  } > m_data
+  } > m_data AT>m_text
 
   __DATA_END = __DATA_ROM + (__data_end__ - __data_start__);
   text_end = ORIGIN(m_text) + LENGTH(m_text);
@@ -151,28 +151,27 @@ SECTIONS
     *(.bss*)
     *(.sbss)
     *(.sbss*)
+    *(.gnu.linkonce.sb.*)
+    *(.gnu.linkonce.b.*)
     *(COMMON)
     . = ALIGN(4);
     __bss_end__ = .;
     __END_BSS = .;
   } > m_data
 
-  /* End of uninitalized data segement */
-  _end = .;
-  PROVIDE(end = .);
+  /* End of uninitalized data segment */
 
-  .heap :
+  . = ALIGN(8);
+  PROVIDE( _end = . );
+  PROVIDE(end = .);
+  __heap_start = .;
+
+  /* stack at end of RAM; everything else serves as heap */
+
+  .stack ORIGIN(m_data) + LENGTH(m_data) - STACK_SIZE :
   {
-    . = ALIGN(8);
-    __heap_start = .;
-    . += HEAP_SIZE;
     __heap_end = .;
     _heap_end = __heap_end;
-  } > m_data
-
-  .stack :
-  {
-    . = ALIGN(8);
     __StackLimit = .;
     . += STACK_SIZE;
     __StackTop = .;
