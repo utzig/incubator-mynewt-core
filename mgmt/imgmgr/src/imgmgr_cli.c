@@ -66,6 +66,11 @@ imgr_cli_too_few_args(void)
     console_printf("Too few args\n");
 }
 
+// copy/pasta for testing
+static void imgr_cli_too_few_args_(void) {
+    console_printf("Too few args\n");
+}
+
 static const char *
 imgr_cli_flags_str(uint32_t image_flags, uint8_t state_flags)
 {

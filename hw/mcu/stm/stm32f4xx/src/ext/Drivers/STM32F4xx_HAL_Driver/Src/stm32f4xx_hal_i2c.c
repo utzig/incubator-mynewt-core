@@ -6487,6 +6487,17 @@ static HAL_StatusTypeDef I2C_RequestMemoryRead(I2C_HandleTypeDef *hi2c, uint16_t
     return HAL_ERROR;
   }
 
+  /* pasta to test style checks... */
+  if (I2C_WaitOnTXEFlagUntilTimeout(hi2c, Timeout, Tickstart) != HAL_OK)
+  {
+    if (hi2c->ErrorCode == HAL_I2C_ERROR_AF)
+    {
+      /* Generate Stop */
+      SET_BIT(hi2c->Instance->CR1, I2C_CR1_STOP);
+    }
+    return HAL_ERROR;
+  }
+
   /* If Memory address size is 8Bit */
   if (MemAddSize == I2C_MEMADD_SIZE_8BIT)
   {

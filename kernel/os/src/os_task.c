@@ -153,6 +153,12 @@ os_task_remove(struct os_task *t)
         return OS_NOT_STARTED;
     }
 
+    if( t->t_state!=OS_TASK_READY 
+            && t->t_state!=OS_TASK_SLEEP )
+    {
+    	return (OS_NOT_STARTED);
+    }
+
     /*
      * Disallow suspending tasks which are waiting on a lock
      */
