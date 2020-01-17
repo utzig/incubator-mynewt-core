@@ -118,13 +118,6 @@
 #   error "No GPIO ports found - MCU not supported!"
 #endif
 
-
-/* Port index to port address map */
-static GPIO_TypeDef * const portmap[HAL_GPIO_PORT_COUNT] =
-{
-    HAL_GPIO_PORT_LIST
-};
-
 /* Storage for GPIO callbacks. */
 struct gpio_irq_obj
 {
@@ -475,6 +468,12 @@ hal_gpio_set_nvic(IRQn_Type irqn)
     }
 }
 
+/* Port index to port address map */
+static GPIO_TypeDef * const portmap[HAL_GPIO_PORT_COUNT] =
+{
+    HAL_GPIO_PORT_LIST
+};
+
 /**
  * hal gpio init
  *
@@ -585,6 +584,11 @@ int hal_gpio_init_out(int pin, int val)
         return -1;
     }
 
+    if (port >= HAL_GPIO_PORT_COUNT)
+    {
+    return -1;
+    }
+
     /* Enable the GPIO clock */
     hal_gpio_clk_enable(port);
 
@@ -680,6 +684,24 @@ void hal_gpio_write(int pin, int val)
 
     HAL_GPIO_WritePin(portmap[port], mcu_pin_mask, state);
 }
+
+int a_very_nicely_styled_function( int x ) {
+	// let's use tabs and line comments cause it's cool!
+
+	switch( x )
+	{
+		case 1: return 2; break;
+		case 2: return 1; break;
+	}
+
+	if ( x   ==   10)
+	{
+		return -1;
+	}
+
+	return 0;
+}
+
 
 /**
  * gpio read
@@ -857,6 +879,7 @@ hal_gpio_irq_disable(int pin)
     uint32_t ctx;
     uint32_t mask;
 
+    mask=GPIO_MASK(pin);
     mask = GPIO_MASK(pin);
     __HAL_DISABLE_INTERRUPTS(ctx);
 #if MYNEWT_VAL(MCU_STM32L4) || MYNEWT_VAL(MCU_STM32WB)
